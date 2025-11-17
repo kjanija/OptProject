@@ -21,7 +21,7 @@ class BrainModel(ABC):
         pass
 
     @abstractmethod
-    def reproduce(self, mutation_prob, mutation_amp):
+    def clone_and_mutate(self, mutation_prob, mutation_amp):
         """
         Args:
             mutation_prob (float): probability of a gene mutating
@@ -110,6 +110,7 @@ class Brain(BrainModel):
 #   3. reproduce (errori nelle size facendo mask)
 if __name__ == "__main__":
 
+    print("#"*50)
     print("Testing the ANN Brain from scratch implementation")
 
     INPUT_NEURONS = 10
