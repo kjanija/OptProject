@@ -13,10 +13,10 @@ class BrainModel(ABC):
     def predict(self, inputs) -> int:
         """
         Args:
-            - inputs, np.ndarray: inputs from the environment
+            inputs (np.ndarray): inputs from the environment
 
         Returns:
-            - int: choosen action
+            int: choosen action
         """
         pass
 
@@ -24,11 +24,11 @@ class BrainModel(ABC):
     def reproduce(self, mutation_prob, mutation_amp):
         """
         Args:
-            - mutation_prob, float: probability of a gene mutating
-            - mutation_amp, float: amplitude of the mutation
+            mutation_prob (float): probability of a gene mutating
+            mutation_amp (float): amplitude of the mutation
 
         Returns:
-            - type BrainModel: Brain of the offspring
+            BrainModel: Brain of the offspring
         """
         pass
 
@@ -55,10 +55,10 @@ class Brain(BrainModel):
         Performs a forward pass of the net and decides action 
 
         Args:
-            - inputs, np.ndarray: inputs from the environment
+            inputs (np.ndarray): inputs from the environment
 
         Returns:
-            - int: choosen action
+            int: choosen action
         """
         
         # commentato perchè spero non sbaglierò a passare gli input
@@ -73,16 +73,16 @@ class Brain(BrainModel):
         # TODO: argmax basta o devo fare softmax e poi scegliere il massimo?
         return np.argmax(x)
     
-    def reproduce(self, mutation_prob, mutation_amp):
+    def clone_and_mutate(self, mutation_prob, mutation_amp):
         """
         Simply creates a deepcopy of this brain and apply mutation
 
         Args:
-            - mutation_prob, float: probability of a gene mutating
-            - mutation_amp, float: amplitude of the mutation
+            mutation_prob (float): probability of a gene mutating
+            mutation_amp (float): amplitude of the mutation
 
         Returns:
-            - type Brain: Brain of the offspring
+            Brain: Brain of the offspring
         """
 
         child = Brain(self.input_size, self.hidden_size, self.output_size)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     assert 0 <= action < OUTPUT_NEURONS
 
     # 3. Test Cloning and Mutation
-    child_brain = parent_brain.reproduce(mutation_prob=0.5, mutation_amp=0.1)
+    child_brain = parent_brain.clone_and_mutate(mutation_prob=0.5, mutation_amp=0.1)
     print("Child brain created through cloning and mutation.")
 
     # Verify that the parent brain is unchanged
