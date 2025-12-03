@@ -1,4 +1,34 @@
 from brain import Brain
+from enum import IntEnum
+
+class Action(IntEnum):
+    """
+    List of actions available to the agent.
+
+    If you want to modify them, modify it here, since the agent's brain will resize
+    according to the number of listed actions here
+    """
+
+    GATHER                  = 0 # Gather resource at current pos
+    GIVE                    = 1 # Give health to neighbour
+    TAKE                    = 2 # Steal health to neighbour
+    WAIT                    = 3 # Do nothing
+    MOVE_TO_RESOURCE        = 4 # Move to neighbouring cell with most energy
+    MOVE_AWAY_FROM_AGENT    = 5 # Move away from neighbouring agents
+    MOVE_TOWARDS_AGENT      = 6 # Move towards neighbouring agents
+    MOVE_RANDOM             = 7 # Random movement
+
+class InputSchema:
+    """
+    Indexes to identify the positions of various perceptions
+    """
+
+    ID_ENERGY       = 0     # Energy levels in each cell in neighbouring 3x3 grid
+    ID_OTHER_HEALTH = 9     # Health levels of agents in neighbouring 3x3 grid, 0 if empty
+    ID_OTHER_DNA    = 18    # Similarity to neighbouring agents, in (0.0, 1.0). Used to model "kinship"/"clans"
+    ID_SELF_HEALTH  = 27
+
+    TOTAL_INPUTS = 28
 
 class Agent:
     """
@@ -44,9 +74,11 @@ if __name__ == "__main__":
     print("Testing Agent class")
 
     # 1. Agent Initialization
-    INPUT_NEURONS = 10
-    HIDDEN_NEURONS = 5
-    OUTPUT_NEURONS = 4
+    INPUT_NEURONS = InputSchema.TOTAL_INPUTS
+    HIDDEN_NEURONS = 32
+    OUTPUT_NEURONS = len(Action)
+
+    print(f"Architecture: {INPUT_NEURONS} Inputs --> {HIDDEN_NEURONS} Hidden ->  {OUTPUT_NEURONS} Actions")
     
     test_brain = Brain(INPUT_NEURONS, HIDDEN_NEURONS, OUTPUT_NEURONS)
     # Generate a random color
