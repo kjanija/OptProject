@@ -82,7 +82,11 @@ class World:
         return inputs
 
 
-    def execute_action(self, agent: Agent = None, action_idx: int = -1):
+    def execute_action(
+            self, agent: Agent = None, 
+            action_idx: int = -1,
+            inputs: np.ndarray = None
+        ):
         """Execute action decided by agent"""
 
         action = Action(action_idx)
@@ -116,38 +120,33 @@ class World:
             move_to(tx, ty)
 
         elif action == Action.MOVE_TO_RESOURCE:
-            best_res = -1
-            best_pos = None
+
+            neighbourhood_energy = inputs[InputSchema.ID_ENERGY:InputSchema.ID_ENERGY + 9]
+            best_idx = np.argmax(neighbourhood_energy)
         
-            # scan the neighbourhood for the cell with max energy
-            for dy in range(-1, 2):
-                for dx in range(-1, 2):
-                    if dx == 0 and dy == 0: continue # since we MOVE to resource
-                    tx, ty = (agent.x + dx) & self.width, (agent.y + dy) & self.heigth
+            if neighbourhood_energy[best_idx] > 0 and best_idx != 4:
+                # go back to a 2d type indicization
+                dy = best_idx // 3 - 1
+                dx = best_idx % 3 - 1
 
-                    if self.resource_grid[tx, ty] > best_res and self.agent_grid[tx, ty] is None:
-                        best_res = self.resource_grid[tx, ty]
-                        best_pos = (tx, ty)
+                tx, ty = (agent.x + dx) & self.width, (agent.y + dy) & self.heigth
+                move_to(tx, ty)
 
-            # move to the cell with max energy, if it exists
-            if best_pos:
-                move_to(*best_pos)
+        elif action == Action.MOVE_AWAY_FROM_AGENT:
+            pass
+            # TODO: un primo modo sarebbe muovere in una cella senza vicini
 
-            elif action == Action.MOVE_AWAY_FROM_AGENT:
-                pass
-                # TODO: un primo modo sarebbe muovere in una cella senza vicini
+        elif action == Action.MOVE_TOWARDS_AGENT:
+            pass
+            # TODO
 
-            elif action == Action.MOVE_TOWARDS_AGENT:
-                pass
-                # TODO
+        elif action == Action.GIVE:
+            pass
+            # TODO
 
-            elif action == Action.GIVE:
-                pass
-                # TODO
-
-            elif action == Action.TAKE:
-                pass 
-                # TODO
+        elif action == Action.TAKE:
+            pass 
+            # TODO
 
     def step_agents(self):
         """Each agent takes a step"""
