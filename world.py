@@ -93,6 +93,7 @@ class World:
 
         def move_to(tx, ty):
             """move to target x and y"""
+            print(f"Target (x,y)={tx, ty}")
             if self.agent_grid[tx, ty] is None:
                 self.agent_grid[agent.x, agent.y] = None
                 self.agent_grid[tx, ty] = agent
@@ -116,7 +117,7 @@ class World:
                 (0, 1), (0, -1), (1, 0), (-1, 0),
                 (1, 1), (1, -1), (-1, 1), (-1, -1)
             ])
-            tx, ty = (agent.x + dx) & self.width, (agent.y + dy) & self.heigth
+            tx, ty = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
             move_to(tx, ty)
 
         elif action == Action.MOVE_TO_RESOURCE:
@@ -129,7 +130,7 @@ class World:
                 dy = best_idx // 3 - 1
                 dx = best_idx % 3 - 1
 
-                tx, ty = (agent.x + dx) & self.width, (agent.y + dy) & self.heigth
+                tx, ty = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
                 move_to(tx, ty)
 
         elif action == Action.MOVE_AWAY_FROM_AGENT:
@@ -165,7 +166,7 @@ class World:
             action_id = agent.brain.predict(inputs)
 
             # act
-            self.execute_action(agent, action_id)
+            self.execute_action(agent, action_id, inputs)
 
             # cost of living
             agent.health -= self.cost_of_life
@@ -181,7 +182,7 @@ class World:
                 for dy in range(-1, 2):
                     for dx in range(-1, 2):
                         if dx == 0 and dy == 0: continue
-                        tx, ty = (agent.x + dx) & self.width, (agent.y + dy) & self.heigth
+                        tx, ty = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
                         if self.agent_grid[tx, ty] is None:
                             # spot found
                             child = agent.reproduce(0.05, 0.1, self.reproduction_cost)
@@ -204,8 +205,8 @@ if __name__ == "__main__":
 
     print("#"*50)
     print("\n--- Testing World Class ---")
-    WORLD_WIDTH = 20
-    WORLD_HEIGHT = 20
+    WORLD_WIDTH = 6
+    WORLD_HEIGHT = 6
     
     world = World(WORLD_WIDTH, WORLD_HEIGHT)
     print("World initialized.")
@@ -219,10 +220,22 @@ if __name__ == "__main__":
     assert world.agent_grid[5, 5] == agent
     
     # Run some steps
-    for i in range(10):
+    for i in range(5):
         print(f"Step: {i+1}--------------------------")
         world.update_world()
         print("World stepped successfully.")
+        print(f"Agent new health (approx 49.5): {agent.health}")
+        
+        # Check if agent moved or stayed (depends on random brain init)
+        print(f"Agent post-step position: {agent.x}, {agent.y}")
+
+    # Let's move randomly
+    print("################Let's move randomly")
+    for i in range(5):
+        print(f"Step: {i+1}--------------------------")
+        inputs = world.get_agent_inputs(agent)
+        world.execute_action(agent, Action.MOVE_RANDOM, inputs)
+        
         print(f"Agent new health (approx 49.5): {agent.health}")
         
         # Check if agent moved or stayed (depends on random brain init)
