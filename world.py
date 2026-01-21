@@ -1,7 +1,10 @@
 import random
+
 import numpy as np
-from agent import Agent, InputSchema, Action
+
+from agent import Action, Agent, InputSchema
 from brain import Brain
+
 
 class World:
     """
@@ -9,15 +12,15 @@ class World:
     """
 
     def __init__(
-            self, 
-            width: int, 
-            height: int, 
-            init_res_density: float = 0.1, 
-            max_resource: float = 5.0,
-            cost_of_life: float = 0.5,      # health to be removed at each round
-            reproduction_threshold: float = 75.0,
-            reproduction_cost = 50.0
-        ):
+        self,
+        width: int,
+        height: int,
+        init_res_density: float = 0.1,
+        max_resource: float = 10.0,
+        cost_of_life: float = 0.5,  # health to be removed at each round
+        reproduction_threshold: float = 75.0,
+        reproduction_cost=50.0,
+    ):
         self.width = width
         self.heigth = height
         self.max_resource = max_resource
@@ -25,14 +28,14 @@ class World:
         self.reproduction_threshold = reproduction_threshold
         self.reproduction_cost = reproduction_cost
 
-        self.agents = []
+        self.agents: list[Agent] = []
 
         self.resource_grid = np.zeros((self.width, self.heigth))
         self.agent_grid = np.full((self.width, self.heigth), None, dtype=object)
 
         self.resource_regrow(init_res_density)
 
-    def resource_regrow(self, density: float = 0.1, amount: float = 1.0):
+    def resource_regrow(self, density: float = 0.05, amount: float = 5.0):
         """Randomly add energy to the grid"""
         mask = np.random.rand(self.width, self.heigth) < density
         self.resource_grid[mask] += amount
@@ -49,16 +52,21 @@ class World:
             self.agents.remove(agent)
             self.agent_grid[agent.x, agent.y] = None
 
+    def get_coords(self, x, y):
+        """Returns the eventually wrapped coods"""
+        # we do this since the grid is considered to be a torus
+        return int(x % self.width), int(y % self.heigth)
+
     def get_agent_inputs(self, agent):
         """Here we gather the 28-value input array used in the agent's brain"""
         inputs = np.zeros(InputSchema.TOTAL_INPUTS)
-        c = 0 # 1d counter since inputs is a 1d vector
+        c = 0  # 1d counter since inputs is a 1d vector
 
         # Here we scan the 3x3 neighbourhood
         for dy in range(-1, 2):
             for dx in range(-1, 2):
                 # we do this since the grid is considered to be a torus
-                nx, ny = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
+                nx, ny = self.get_coords(agent.x + dx, agent.y + dy)
 
                 # energy
                 inputs[InputSchema.ID_ENERGY + c] = self.resource_grid[nx, ny]
@@ -72,7 +80,9 @@ class World:
                     inputs[InputSchema.ID_OTHER_HEALTH + c] = neighbour.health
 
                     # kinship/dna of neighbours
-                    dist = np.linalg.norm(np.array(agent.color) - np.array(neighbour.color))
+                    dist = np.linalg.norm(
+                        np.array(agent.color) - np.array(neighbour.color)
+                    )
                     inputs[InputSchema.ID_OTHER_DNA + c] = max(0, 1.0 - dist)
 
                 c += 1
@@ -81,28 +91,25 @@ class World:
 
         return inputs
 
-
-    def execute_action(
-            self, 
-            agent: Agent, 
-            inputs: np.ndarray,
-            action_idx: int = -1
-        ):
+    def execute_action(self, agent: Agent, inputs: np.ndarray, action_idx: int = -1):
         """Execute action decided by agent"""
 
         action = Action(action_idx)
 
         def move_to(tx, ty):
             """move to target x and y"""
-            print(f"Target (x,y)={tx, ty}")
+            # For debug purposes : print(f"Target (x,y)={tx, ty}")
             if self.agent_grid[tx, ty] is None:
                 self.agent_grid[agent.x, agent.y] = None
                 self.agent_grid[tx, ty] = agent
 
                 agent.x, agent.y = tx, ty
-                return True # Successful movement
+                return True  # Successful movement
             return False
-        
+
+        def get_neighbor_coords(dx, dy):
+            return self.get_coords(agent.x + dx, agent.y + dy)
+
         # Let's manage the various actions now
         if action == Action.GATHER:
             energy = self.resource_grid[agent.x, agent.y]
@@ -110,45 +117,115 @@ class World:
                 agent.health += energy
                 self.resource_grid[agent.x, agent.y] = 0
 
-        # elif action == Action.WAIT:
-            # pass # Right now does nothing, but in future I may change it
+        elif action == Action.WAIT:
+            pass  # Right now does nothing, but in future I may change it
 
         elif action == Action.MOVE_RANDOM:
-            dx, dy = random.choice([
-                (0, 1), (0, -1), (1, 0), (-1, 0),
-                (1, 1), (1, -1), (-1, 1), (-1, -1)
-            ])
-            tx, ty = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
+            dx, dy = random.choice(
+                [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+            )
+            tx, ty = get_neighbor_coords(dx, dy)
             move_to(tx, ty)
 
         elif action == Action.MOVE_TO_RESOURCE:
 
-            neighbourhood_energy = inputs[InputSchema.ID_ENERGY:InputSchema.ID_ENERGY + 9]
+            neighbourhood_energy = inputs[
+                InputSchema.ID_ENERGY : InputSchema.ID_ENERGY + 9
+            ]
             best_idx = np.argmax(neighbourhood_energy)
-        
-            if neighbourhood_energy[best_idx] > 0 and best_idx != 4:
-                # go back to a 2d type indicization
-                dy = best_idx // 3 - 1
-                dx = best_idx % 3 - 1
 
-                tx, ty = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
+            if (
+                neighbourhood_energy[best_idx] > 0 and best_idx != 4
+            ):  # because idx 4 is self
+                # go back to a 2d type indicization
+                dy = int(best_idx // 3 - 1)
+                dx = int(best_idx % 3 - 1)
+
+                tx, ty = get_neighbor_coords(dx, dy)
                 move_to(tx, ty)
 
         elif action == Action.MOVE_AWAY_FROM_AGENT:
-            pass
-            # TODO: un primo modo sarebbe muovere in una cella senza vicini
+            # will use agents health as an indicator of presence
+            neighbourhood_health = inputs[
+                InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9
+            ]
+            empty_spots = []
+            for i in range(9):
+                if i == 4:
+                    continue
+                if neighbourhood_health[i] == 0:
+                    empty_spots.append(i)
+
+            if empty_spots:
+                choosen = random.choice(empty_spots)
+                dy = int(choosen // 3 - 1)
+                dx = int(choosen % 3 - 1)
+                tx, ty = get_neighbor_coords(dx, dy)
+                move_to(tx, ty)
+            else:
+                # random move if surrounded
+                dx, dy = random.choice(
+                    [
+                        (0, 1),
+                        (0, -1),
+                        (1, 0),
+                        (-1, 0),
+                        (1, 1),
+                        (1, -1),
+                        (-1, 1),
+                        (-1, -1),
+                    ]
+                )
+                tx, ty = get_neighbor_coords(dx, dy)
+                move_to(tx, ty)
 
         elif action == Action.MOVE_TOWARDS_AGENT:
-            pass
-            # TODO
+            # will use still health as indicator of presence
+            neighbourhood_health = inputs[
+                InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9
+            ]
+            best_idx = np.argmax(neighbourhood_health)
+
+            if best_idx != 4 and neighbourhood_health[best_idx] > 0:
+                dy = int(best_idx // 3 - 1)
+                dx = int(best_idx % 3 - 1)
+                tx, ty = get_neighbor_coords(dx, dy)
+                move_to(tx, ty)
 
         elif action == Action.GIVE:
-            pass
-            # TODO
+            # give 10 health to a random neighbor
+            neighbors = []
+            for dy in range(-1, 2):
+                for dx in range(-1, 2):
+                    if dx == 0 and dy == 0:
+                        continue
+                    tx, ty = get_neighbor_coords(dx, dy)
+                    n = self.agent_grid[tx, ty]
+                    if n:
+                        neighbors.append(n)
+
+            if neighbors and agent.health > 10:
+                receiver = random.choice(neighbors)
+                agent.health -= 10.0
+                receiver.health += 10.0
 
         elif action == Action.TAKE:
-            pass 
-            # TODO
+            # steal 10 health from a neighbor
+            neighbors = []
+            for dy in range(-1, 2):
+                for dx in range(-1, 2):
+                    if dx == 0 and dy == 0:
+                        continue
+                    tx, ty = get_neighbor_coords(dx, dy)
+                    n = self.agent_grid[tx, ty]
+                    if n:
+                        neighbors.append(n)
+
+            if neighbors:
+                victim = random.choice(neighbors)
+                amount = min(10.0, victim.health)
+                victim.health -= amount
+                agent.health += amount
 
     def step_agents(self):
         """Each agent takes a step"""
@@ -160,31 +237,25 @@ class World:
         for agent in self.agents[:]:
             # we copy the list because we are making changes to it inside the loop
 
-            # get info from env
-            inputs = self.get_agent_inputs(agent)
-            
-            # think
-            action_id = agent.brain.predict(inputs)
-
-            # act
-            self.execute_action(agent, inputs, action_id)
-
+            inputs = self.get_agent_inputs(agent)  # get info from env
+            action_id = agent.brain.predict(inputs)  # think
+            self.execute_action(agent, inputs, action_id)  # act
 
             # cost of living
             agent.health -= self.cost_of_life
-
             if agent.health <= 0:
                 self.remove_agent(agent)
-                continue # if dead, can't reproduce
+                continue  # if dead, can't reproduce
 
             # reproduce if possible
-            if agent.health >= self.reproduction_cost:
+            if agent.health > self.reproduction_cost:
                 # search for a spot
                 found = False
                 for dy in range(-1, 2):
                     for dx in range(-1, 2):
-                        if dx == 0 and dy == 0: continue
-                        tx, ty = (agent.x + dx) % self.width, (agent.y + dy) % self.heigth
+                        if dx == 0 and dy == 0:
+                            continue
+                        tx, ty = self.get_coords(agent.x + dx, agent.y + dy)
                         if self.agent_grid[tx, ty] is None:
                             # spot found
                             child = agent.reproduce(0.05, 0.1, self.reproduction_cost)
@@ -195,52 +266,146 @@ class World:
                     if found:
                         break
 
-
     def update_world(self):
         """
         The main simulation step
         """
-        self.resource_regrow()
+        self.resource_regrow(amount=5.0)
         self.step_agents()
 
+
 if __name__ == "__main__":
+    print("\n=== STARTING COMPREHENSIVE UNIT TESTS ===\n")
 
-    print("#"*50)
-    print("\n--- Testing World Class ---")
-    WORLD_WIDTH = 6
-    WORLD_HEIGHT = 6
-    
-    world = World(WORLD_WIDTH, WORLD_HEIGHT)
-    print("World initialized.")
-    
-    # Create an agent and add it
-    brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
-    agent = Agent(brain, 5, 5, 50.0, (1,0,0))
+    # Helper function to reset world
+    def create_test_world():
+        w = World(10, 10, init_res_density=0.0)  # Empty world
+        # Clear any random resources added by init
+        w.resource_grid.fill(0)
+        return w
+
+    # Helper to create a dummy agent
+    def create_dummy_agent(x, y, health=100.0):
+        brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
+        return Agent(brain, x, y, health, (1, 0, 0))
+
+    # --- TEST 1: GATHER ---
+    print("Test 1: GATHER Action...", end=" ")
+    world = create_test_world()
+    agent = create_dummy_agent(5, 5, health=50.0)
     world.add_agent(agent)
-    
-    print(f"Agent added at {agent.x}, {agent.y}")
-    assert world.agent_grid[5, 5] == agent
-    
-    # Run some steps
-    for i in range(5):
-        print(f"Step: {i+1}--------------------------")
-        world.update_world()
-        print("World stepped successfully.")
-        print(f"Agent new health (approx 49.5): {agent.health}")
-        
-        # Check if agent moved or stayed (depends on random brain init)
-        print(f"Agent post-step position: {agent.x}, {agent.y}")
+    world.resource_grid[5, 5] = 10.0
+    inputs = world.get_agent_inputs(agent)
+    world.execute_action(agent, inputs, Action.GATHER)
+    assert agent.health == 60.0, f"Health should be 60, got {agent.health}"
+    assert world.resource_grid[5, 5] == 0.0, "Resource should be consumed"
+    print("PASSED")
 
-    # Let's move randomly
-    print("################Let's move randomly")
-    for i in range(5):
-        print(f"Step: {i+1}--------------------------")
+    # --- TEST 2: WAIT ---
+    print("Test 2: WAIT Action...", end=" ")
+    world = create_test_world()
+    agent = create_dummy_agent(5, 5, health=50.0)
+    world.add_agent(agent)
+    inputs = world.get_agent_inputs(agent)
+    world.execute_action(agent, inputs, Action.WAIT)
+    assert agent.health == 50.0, "Health should not change during WAIT"
+    assert agent.x == 5 and agent.y == 5, "Agent should not move"
+    print("PASSED")
+
+    # --- TEST 3: MOVE_TO_RESOURCE ---
+    print("Test 3: MOVE_TO_RESOURCE...", end=" ")
+    world = create_test_world()
+    agent = create_dummy_agent(5, 5)
+    world.add_agent(agent)
+    world.resource_grid[6, 5] = 10.0  # Right
+    world.resource_grid[4, 5] = 0.0  # Left
+    inputs = world.get_agent_inputs(agent)
+    world.execute_action(agent, inputs, Action.MOVE_TO_RESOURCE)
+    assert (
+        agent.x == 6 and agent.y == 5
+    ), f"Agent should move to (6, 5), got ({agent.x}, {agent.y})"
+    assert world.agent_grid[5, 5] is None, "Old spot should be empty"
+    assert world.agent_grid[6, 5] == agent, "New spot should be occupied"
+    print("PASSED")
+
+    # --- TEST 4: GIVE (Altruism) ---
+    print("Test 4: GIVE Action...", end=" ")
+    world = create_test_world()
+    giver = create_dummy_agent(5, 5, health=50.0)
+    receiver = create_dummy_agent(5, 6, health=20.0)
+    world.add_agent(giver)
+    world.add_agent(receiver)
+    inputs = world.get_agent_inputs(giver)
+    world.execute_action(giver, inputs, Action.GIVE)
+    assert giver.health == 40.0, f"Giver should lose 10, got {giver.health}"
+    assert receiver.health == 30.0, f"Receiver should gain 10, got {receiver.health}"
+    print("PASSED")
+
+    # --- TEST 5: TAKE (Aggression) ---
+    print("Test 5: TAKE Action...", end=" ")
+    world = create_test_world()
+    attacker = create_dummy_agent(5, 5, health=50.0)
+    victim = create_dummy_agent(5, 6, health=20.0)
+    world.add_agent(attacker)
+    world.add_agent(victim)
+    inputs = world.get_agent_inputs(attacker)
+    world.execute_action(attacker, inputs, Action.TAKE)
+    assert victim.health == 10.0, f"Victim should lose 10, got {victim.health}"
+    assert attacker.health == 60.0, f"Attacker should gain 10, got {attacker.health}"
+    print("PASSED")
+
+    # --- TEST 6: MOVE_AWAY_FROM_AGENT ---
+    print("Test 6: MOVE_AWAY_FROM_AGENT...", end=" ")
+    world = create_test_world()
+    fleeing_agent = create_dummy_agent(5, 5)
+    scary_neighbor = create_dummy_agent(5, 6)  # To the right
+    world.add_agent(fleeing_agent)
+    world.add_agent(scary_neighbor)
+    inputs = world.get_agent_inputs(fleeing_agent)
+    world.execute_action(fleeing_agent, inputs, Action.MOVE_AWAY_FROM_AGENT)
+    assert (fleeing_agent.x, fleeing_agent.y) != (5, 6), "Should not move into neighbor"
+    assert (fleeing_agent.x, fleeing_agent.y) != (5, 5), "Should have moved"
+    print("PASSED")
+
+    # --- TEST 7: MOVE_TOWARDS_AGENT (Bump test) ---
+    print("Test 7: MOVE_TOWARDS_AGENT...", end=" ")
+    world = create_test_world()
+    stalker = create_dummy_agent(5, 5)
+    target = create_dummy_agent(6, 5)
+    world.add_agent(stalker)
+    world.add_agent(target)
+    inputs = world.get_agent_inputs(stalker)
+    world.execute_action(stalker, inputs, Action.MOVE_TOWARDS_AGENT)
+    # Logic implies checking neighbor, finding max health, trying to move there, failing.
+    assert stalker.x == 5 and stalker.y == 5, "Should stay put (collision)"
+    print("PASSED")
+
+    # --- TEST 8: MOVE_RANDOM ---
+    print("Test 8: MOVE_RANDOM...", end=" ")
+    world = create_test_world()
+    agent = create_dummy_agent(5, 5)
+    world.add_agent(agent)
+    initial_pos = (agent.x, agent.y)
+    moved = False
+    for _ in range(10):
         inputs = world.get_agent_inputs(agent)
         world.execute_action(agent, inputs, Action.MOVE_RANDOM)
-        
-        print(f"Agent new health (approx 49.5): {agent.health}")
-        
-        # Check if agent moved or stayed (depends on random brain init)
-        print(f"Agent post-step position: {agent.x}, {agent.y}")
-    
-    print("\nAll systems operational.")
+        if (agent.x, agent.y) != initial_pos:
+            moved = True
+            break
+    assert moved, "Agent should eventually move randomly"
+    print("PASSED")
+
+    # --- TEST 9: REPRODUCTION ---
+    print("Test 9: Reproduction...", end=" ")
+    world = create_test_world()
+    parent = create_dummy_agent(5, 5, health=90.0)
+    world.add_agent(parent)
+    world.step_agents()
+    assert (
+        parent.health < 60.0
+    ), f"Parent should have paid cost. Health: {parent.health}"
+    assert len(world.agents) == 2, "Population should be 2"
+    print("PASSED")
+
+    print("\n=== ALL UNIT TESTS PASSED SUCCESSFULLY ===")

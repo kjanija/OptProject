@@ -40,8 +40,8 @@ class Agent:
 
     def __init__(self, brain: Brain, x: int, y: int, initial_health: float, color: tuple):
         self.brain = brain
-        self.x = x
-        self.y = y
+        self.x = int(x)
+        self.y = int(y)
         self.health = initial_health
         self.color = color
 
