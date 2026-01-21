@@ -40,11 +40,11 @@ class World:
         # Each cell has a "carying capacity" of resources, it cannot be infinite
         self.resource_grid = np.minimum(self.resource_grid, self.max_resource)
 
-    def add_agent(self, agent: Agent = None):
+    def add_agent(self, agent: Agent):
         self.agents.append(agent)
         self.agent_grid[agent.x, agent.y] = agent
 
-    def remove_agent(self, agent: Agent = None):
+    def remove_agent(self, agent: Agent):
         if agent in self.agents:
             self.agents.remove(agent)
             self.agent_grid[agent.x, agent.y] = None
@@ -83,9 +83,10 @@ class World:
 
 
     def execute_action(
-            self, agent: Agent = None, 
-            action_idx: int = -1,
-            inputs: np.ndarray = None
+            self, 
+            agent: Agent, 
+            inputs: np.ndarray,
+            action_idx: int = -1
         ):
         """Execute action decided by agent"""
 
@@ -166,7 +167,8 @@ class World:
             action_id = agent.brain.predict(inputs)
 
             # act
-            self.execute_action(agent, action_id, inputs)
+            self.execute_action(agent, inputs, action_id)
+
 
             # cost of living
             agent.health -= self.cost_of_life
@@ -234,7 +236,7 @@ if __name__ == "__main__":
     for i in range(5):
         print(f"Step: {i+1}--------------------------")
         inputs = world.get_agent_inputs(agent)
-        world.execute_action(agent, Action.MOVE_RANDOM, inputs)
+        world.execute_action(agent, inputs, Action.MOVE_RANDOM)
         
         print(f"Agent new health (approx 49.5): {agent.health}")
         
