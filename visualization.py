@@ -1,19 +1,21 @@
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 import numpy as np
+
+from agent import Action, Agent, InputSchema
 from brain import Brain
 from world import World
-from agent import Agent, InputSchema, Action
 
 WIDTH = 50
 HEIGTH = 50
 INITIAL_AGENTS = 50
-STEPS_PER_FRAME = 1 # i.e. simulation steps per animation frame
+STEPS_PER_FRAME = 1  # i.e. simulation steps per animation frame
 INIT_HEALTH = 100.0
 INIT_RES_DENSITY = 0.2
 HIDDEN_DIM = 10
 OUTPUT_DIM = len(Action)
 INPUT_DIM = InputSchema.TOTAL_INPUTS
+
 
 def create_world():
     world = World(WIDTH, HEIGTH, init_res_density=INIT_RES_DENSITY)
@@ -21,63 +23,149 @@ def create_world():
     for _ in range(INITIAL_AGENTS):
         world.add_agent(
             Agent(
-                Brain(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM), 
-                np.random.randint(0, world.width), 
-                np.random.randint(0, world.heigth), 
-                INIT_HEALTH, 
-                tuple(np.random.rand(3))
+                Brain(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM),
+                np.random.randint(0, world.width),
+                np.random.randint(0, world.heigth),
+                INIT_HEALTH,
+                color=None,
             )
         )
 
     return world
 
+
 # An LLM was used to help me with the visualization
+
+
 def run_visualization():
     world = create_world()
 
-    fig, ax = plt.subplots(figsize=(8,8))
+    # Create figure with 2 subplots (Grid on top, Stats on bottom)
+    fig, (ax_grid, ax_stats) = plt.subplots(
+        2, 1, figsize=(8, 12), gridspec_kw={"height_ratios": [3, 1]}
+    )
+    ax_grid.set_title("Co-evolution Grid World")
+    ax_stats.set_title("Action Distribution (Last Step)")
+    ax_stats.set_ylabel("Count")
+    ax_stats.set_xlabel("Generation")
 
-    ax.set_title("Co-evolution Grid-World")
+    # 1. Resource Grid (Image)
+    resource_img = ax_grid.imshow(
+        world.resource_grid.T, cmap="Greens", vmin=0, vmax=5, origin="lower"
+    )
 
-    # initialize the resource reference for the plot, will be updated subsequently
-    resouce_ref = ax.imshow(world.resource_grid.T, cmap="Greens", vmin=0, vmax=5, origin="lower")
+    # 2. Agents (Scatter Plot)
+    agents_scatter = ax_grid.scatter([], [], c=[], s=50, edgecolors="black")
 
-    # same for the agents reference
-    agents_img = ax.scatter([], [], c=[], s=50, edgecolors="black")
+    # 3. Stats Text
+    stats_text = ax_grid.text(
+        0.02,
+        0.98,
+        "",
+        transform=ax_grid.transAxes,
+        va="top",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+    )
 
-    stats_text_ref = ax.text(0.02, 0.98, "", transform=ax.transAxes, va="top",
-                             bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
-    
+    # 4. Action Line Chart Setup
+    x_data = []
+    # Create a list of lists to store history for each action
+    y_data = {action: [] for action in Action}
+    # Create lines for each action
+    lines = {}
+
+    # Define colorblind-friendly colors (Okabe-Ito palette)
+    action_colors = {
+        Action.GATHER: "#009E73",  # Bluish Green (Distinct from Vermilion)
+        Action.GIVE: "#56B4E9",  # Sky Blue
+        Action.TAKE: "#D55E00",  # Vermilion (Red-Orange)
+        Action.WAIT: "#000000",  # Black
+        Action.MOVE_TO_RESOURCE: "#0072B2",  # Blue
+        Action.MOVE_AWAY_FROM_AGENT: "#E69F00",  # Orange
+        Action.MOVE_TOWARDS_AGENT: "#CC79A7",  # Reddish Purple
+        Action.MOVE_RANDOM: "#999999",  # Grey
+    }
+
+    # Define linestyles to further distinguish categories (Double Coding)
+    # Solid: Core Interaction
+    # Dashed: Directed Movement
+    # Dotted: Passive/Noise
+    action_styles = {
+        Action.GATHER: "-",
+        Action.GIVE: "-",
+        Action.TAKE: "-",
+        Action.WAIT: ":",
+        Action.MOVE_TO_RESOURCE: "--",
+        Action.MOVE_AWAY_FROM_AGENT: "--",
+        Action.MOVE_TOWARDS_AGENT: "--",
+        Action.MOVE_RANDOM: ":",
+    }
+
+    for action in Action:
+        (line,) = ax_stats.plot(
+            [],
+            [],
+            label=action.name,
+            color=action_colors.get(action, "black"),
+            linestyle=action_styles.get(action, "-"),
+            linewidth=2,
+        )  # Increased linewidth for better visibility
+        lines[action] = line
+
+    ax_stats.legend(loc="upper right", fontsize="small", ncol=2)
+
     def update(frame):
-        # Run simulation
+        # Run Simulation
         for _ in range(STEPS_PER_FRAME):
             world.update_world()
 
-        # Now let's update stuff
-        resouce_ref.set_data(world.resource_grid.T)
+        # Update Grid Visualization
+        resource_img.set_data(world.resource_grid.T)
 
         if world.agents:
-            x_s = [a.x for a in world.agents]
-            y_s = [a.y for a in world.agents]
+            xs = [a.x for a in world.agents]
+            ys = [a.y for a in world.agents]
             colors = [a.color for a in world.agents]
-
-            # update scatter plot
-            agents_img.set_offsets(np.c_[x_s, y_s])
-            agents_img.set_color(colors)        
+            agents_scatter.set_offsets(np.c_[xs, ys])
+            agents_scatter.set_color(colors)
         else:
-            # clear if dead
-            agents_img.set_offsets(np.empty((0, 2)))
+            agents_scatter.set_offsets(np.empty((0, 2)))
 
-        # Update stats_text_ref
         avg_health = np.mean([a.health for a in world.agents]) if world.agents else 0
-        stats_text_ref.set_text(f"Generation: {frame}\nPopulation: {len(world.agents)}\nAverage Health: {avg_health:.2f}")
+        stats_text.set_text(
+            f"Gen: {frame}\nPop: {len(world.agents)}\nHealth: {avg_health:.1f}"
+        )
 
-        return resouce_ref, agents_img, stats_text_ref
+        # Update Stats Chart
+        x_data.append(frame)
 
-    anim = animation.FuncAnimation(fig, update, interval=50, blit=False)
+        # Get stats from the world for this step
+        current_stats = world.last_step_stats
 
+        # Determine max y for scaling
+        max_val = 0
+
+        for action in Action:
+            count = current_stats.get(action, 0)
+            y_data[action].append(count)
+            lines[action].set_data(x_data, y_data[action])
+            if count > max_val:
+                max_val = count
+
+        # Dynamic scaling of axes
+        ax_stats.set_xlim(
+            max(0, frame - 100), frame + 10
+        )  # Show window of last 100 frames
+        ax_stats.set_ylim(0, max_val + 5)
+
+        return resource_img, agents_scatter, stats_text, *lines.values()
+
+    ani = animation.FuncAnimation(
+        fig, update, interval=50, blit=False, cache_frame_data=False
+    )
     plt.tight_layout()
     plt.show()
+
 
 if __name__ == "__main__":
     run_visualization()

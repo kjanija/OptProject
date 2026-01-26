@@ -33,6 +33,8 @@ class World:
         self.resource_grid = np.zeros((self.width, self.heigth))
         self.agent_grid = np.full((self.width, self.heigth), None, dtype=object)
 
+        self.last_step_stats = {action: 0 for action in Action}
+
         self.resource_regrow(init_res_density)
 
     def resource_regrow(self, density: float = 0.05, amount: float = 5.0):
@@ -95,6 +97,9 @@ class World:
         """Execute action decided by agent"""
 
         action = Action(action_idx)
+
+        # log action
+        self.last_step_stats[action] += 1
 
         def move_to(tx, ty):
             """move to target x and y"""
@@ -230,6 +235,9 @@ class World:
     def step_agents(self):
         """Each agent takes a step"""
 
+        # Reset the stats
+        self.last_step_stats = {action: 0 for action in Action}
+
         # For now I avoid complex "collision" resolution and just shuffle at
         # every round the order of the agents as to reduce the order bias
         random.shuffle(self.agents)
@@ -239,7 +247,7 @@ class World:
 
             inputs = self.get_agent_inputs(agent)  # get info from env
             action_id = agent.brain.predict(inputs)  # think
-            self.execute_action(agent, inputs, action_id)  # act
+            self.execute_action(agent, inputs, int(action_id))  # act
 
             # cost of living
             agent.health -= self.cost_of_life

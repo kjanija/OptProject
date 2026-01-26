@@ -1,5 +1,7 @@
-import numpy as np
 from abc import ABC, abstractmethod
+
+import numpy as np
+
 
 class BrainModel(ABC):
     """
@@ -32,6 +34,7 @@ class BrainModel(ABC):
         """
         pass
 
+
 class Brain(BrainModel):
     """
     Simple FFN implemented with numpy
@@ -52,7 +55,7 @@ class Brain(BrainModel):
 
     def predict(self, inputs):
         """
-        Performs a forward pass of the net and decides action 
+        Performs a forward pass of the net and decides action
 
         Args:
             inputs (np.ndarray): inputs from the environment
@@ -60,19 +63,19 @@ class Brain(BrainModel):
         Returns:
             int: choosen action
         """
-        
+
         # commentato perchè spero non sbaglierò a passare gli input
         # if not isinstance(inputs, np.ndarray):
-            # inputs = np.array(inputs)
+        # inputs = np.array(inputs)
 
-        #forward pass
+        # forward pass
         x = np.dot(inputs, self.W1) + self.b1
-        x = np.maximum(0, x) # ReLU
+        x = np.maximum(0, x)  # ReLU
         x = np.dot(x, self.W2) + self.b2
-        
+
         # TODO: argmax basta o devo fare softmax e poi scegliere il massimo?
         return np.argmax(x)
-    
+
     def clone_and_mutate(self, mutation_prob, mutation_amp):
         """
         Simply creates a deepcopy of this brain and apply mutation
@@ -101,21 +104,22 @@ class Brain(BrainModel):
             genome_part[mask] += mutation[mask]
 
         return child
-    
+
+
 # Below code is for testing, LLMs helped me with it
 # Non l'avrei detto, ma è risultato utile già dai primi secondi dopo la creazione
 # delle classi precedenti. Trovato errori in:
-#   1. init (size incoerenti) 
+#   1. init (size incoerenti)
 #   2. predict (np.max invece che np.maximum)
 #   3. reproduce (errori nelle size facendo mask)
 if __name__ == "__main__":
 
-    print("#"*50)
+    print("#" * 50)
     print("Testing the ANN Brain from scratch implementation")
 
     INPUT_NEURONS = 10
     HIDDEN_NEURONS = 5
-    OUTPUT_NEURONS = 4 # These represent the number of actions
+    OUTPUT_NEURONS = 4  # These represent the number of actions
 
     # 1. Test Initialization
     parent_brain = Brain(INPUT_NEURONS, HIDDEN_NEURONS, OUTPUT_NEURONS)
@@ -143,3 +147,4 @@ if __name__ == "__main__":
     print("Verified that child's genes (weights) are different from parent's.")
 
     print("\nNumpyBrain tests passed successfully!")
+
