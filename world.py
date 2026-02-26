@@ -20,19 +20,24 @@ class World:
         cost_of_life: float = 0.5,  # health to be removed at each round
         reproduction_threshold: float = 75.0,
         reproduction_cost=50.0,
+        reproduction_maturity_age: int = 0,
+        reproduction_cooldown_time: int = 0,
+        reproduction_prob: float = 1.0,
     ):
         self.width = width
         self.heigth = height
         self.max_resource = max_resource
         self.cost_of_life = cost_of_life
+
         self.reproduction_threshold = reproduction_threshold
         self.reproduction_cost = reproduction_cost
+        self.reproduction_maturity_age = reproduction_maturity_age
+        self.reproduction_cooldown_time = reproduction_cooldown_time
+        self.reproduction_prob = reproduction_prob
 
         self.agents: list[Agent] = []
-
         self.resource_grid = np.zeros((self.width, self.heigth))
         self.agent_grid = np.full((self.width, self.heigth), None, dtype=object)
-
         self.last_step_stats = {action: 0 for action in Action}
 
         self.resource_regrow(init_res_density)
@@ -232,6 +237,18 @@ class World:
                 victim.health -= amount
                 agent.health += amount
 
+    def can_reproduce(self, agent: Agent) -> bool:
+        if agent.health <= self.reproduction_threshold:
+            return False
+        if agent.age < self.reproduction_maturity_age:
+            return False
+        if agent.reproduction_cooldown > 0:
+            return False
+        if random.random() > self.reproduction_prob:
+            return False
+
+        return True
+
     def step_agents(self):
         """Each agent takes a step"""
 
@@ -245,6 +262,11 @@ class World:
         for agent in self.agents[:]:
             # we copy the list because we are making changes to it inside the loop
 
+            agent.age += 1
+            if agent.reproduction_cooldown > 0:
+                agent.reproduction_cooldown -= 1
+
+            # act
             inputs = self.get_agent_inputs(agent)  # get info from env
             action_id = agent.brain.predict(inputs)  # think
             self.execute_action(agent, inputs, int(action_id))  # act
@@ -256,7 +278,7 @@ class World:
                 continue  # if dead, can't reproduce
 
             # reproduce if possible
-            if agent.health > self.reproduction_cost:
+            if self.can_reproduce(agent):
                 # search for a spot
                 found = False
                 for dy in range(-1, 2):
@@ -269,6 +291,9 @@ class World:
                             child = agent.reproduce(0.05, 0.1, self.reproduction_cost)
                             child.x, child.y = tx, ty
                             self.add_agent(child)
+                            agent.reproduction_cooldown = (
+                                self.reproduction_cooldown_time
+                            )
                             found = True
                             break
                     if found:

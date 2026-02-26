@@ -51,6 +51,8 @@ class Agent:
         self.x = int(x)
         self.y = int(y)
         self.health = initial_health
+        self.age = 0
+        self.reproduction_cooldown = 0
 
         if color is None:
             self.color = self._get_color_from_genes()
@@ -66,17 +68,13 @@ class Agent:
         """
         # For this simple xAI segment we focus on the second layer
 
-        w_take = self.brain.W2[:, Action.TAKE]
-        w_attack = self.brain.W2[:, Action.MOVE_TOWARDS_AGENT]
-        r_val = np.mean(np.abs(w_take)) + np.mean(np.abs(w_attack))
+        def get_strength(action_idx: Action | None):
+            w = self.brain.W2[:, action_idx]
+            return np.mean(np.maximum(0, w))
 
-        w_gather = self.brain.W2[:, Action.GATHER]
-        w_find = self.brain.W2[:, Action.MOVE_TO_RESOURCE]
-        g_val = np.mean(np.abs(w_gather)) + np.mean(np.abs(w_find))
-
-        w_give = self.brain.W2[:, Action.GIVE]
-        w_flee = self.brain.W2[:, Action.MOVE_AWAY_FROM_AGENT]
-        b_val = np.mean(np.abs(w_give)) + np.mean(np.abs(w_flee))
+        r_val = get_strength(Action.TAKE) + get_strength(Action.MOVE_TOWARDS_AGENT)
+        g_val = get_strength(Action.GATHER) + get_strength(Action.MOVE_TO_RESOURCE)
+        b_val = get_strength(Action.GIVE) + get_strength(Action.MOVE_AWAY_FROM_AGENT)
 
         tot = r_val + g_val + b_val + 1e-06
         return (r_val / tot, g_val / tot, b_val / tot)
@@ -105,7 +103,9 @@ class Agent:
         )  # color = None in case of mutation
 
     def __repr__(self):
-        return f"Agent(pos=({self.x},{self.y}), health={self.health:.2f})"
+        return (
+            f"Agent(pos=({self.x},{self.y}), health={self.health:.2f}, age={self.age})"
+        )
 
 
 if __name__ == "__main__":

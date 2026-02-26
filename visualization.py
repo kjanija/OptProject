@@ -37,8 +37,8 @@ def create_world():
 # An LLM was used to help me with the visualization
 
 
-def run_visualization():
-    world = create_world()
+def run_visualization(world_creation_fun=create_world):
+    world = world_creation_fun()
 
     # Create figure with 2 subplots (Grid on top, Stats on bottom)
     fig, (ax_grid, ax_stats) = plt.subplots(
