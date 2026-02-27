@@ -23,6 +23,8 @@ class World:
         reproduction_maturity_age: int = 0,
         reproduction_cooldown_time: int = 0,
         reproduction_prob: float = 1.0,
+        regrow_density: float = 0.05,
+        regrow_amount: float = 5.0,
     ):
         self.width = width
         self.heigth = height
@@ -35,15 +37,20 @@ class World:
         self.reproduction_cooldown_time = reproduction_cooldown_time
         self.reproduction_prob = reproduction_prob
 
+        self.regrow_density = regrow_density
+        self.regrow_amount = regrow_amount
+
         self.agents: list[Agent] = []
         self.resource_grid = np.zeros((self.width, self.heigth))
         self.agent_grid = np.full((self.width, self.heigth), None, dtype=object)
         self.last_step_stats = {action: 0 for action in Action}
 
-        self.resource_regrow(init_res_density)
+        self.resource_regrow(density=init_res_density, amount=10.0)
 
     def resource_regrow(self, density: float = 0.05, amount: float = 5.0):
         """Randomly add energy to the grid"""
+        if amount <= 0:
+            return
         mask = np.random.rand(self.width, self.heigth) < density
         self.resource_grid[mask] += amount
 
@@ -303,7 +310,7 @@ class World:
         """
         The main simulation step
         """
-        self.resource_regrow(amount=5.0)
+        self.resource_regrow(density=self.regrow_density, amount=self.regrow_amount)
         self.step_agents()
 
 
