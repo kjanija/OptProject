@@ -34,7 +34,7 @@ class OasisWorld(World):
         self.resource_grid = np.minimum(self.resource_grid, self.max_resource)
 
 
-def inject_smart_genes(brain: Brain):
+def inject_forager_genes(brain: Brain):
     """
     Injects the following strategy:
     1. If standing on food -> GATHER
@@ -46,7 +46,6 @@ def inject_smart_genes(brain: Brain):
     brain.W2.fill(0.0)
     brain.b2.fill(0.0)
 
-    #############Hidden layer
     # Hidden neuron 0: standing on food
     brain.W1[InputSchema.ID_ENERGY + 4, 0] = 10.0
 
@@ -58,7 +57,7 @@ def inject_smart_genes(brain: Brain):
     # Hidden neuron 2: always on bias
     brain.b1[2] = 1.0
 
-    #############Output layer
+    ##Output layer
     # strongly trigger GATHER if standing on food (h[0] high)
     brain.W2[0, Action.GATHER] = 100.0
 
@@ -69,6 +68,89 @@ def inject_smart_genes(brain: Brain):
     brain.W2[2, Action.MOVE_RANDOM] = 10.0
 
 
+def inject_prey_genes(brain: Brain):
+    """Gathers food, but flees if another agent is nearby"""
+    inject_forager_genes(brain)
+    # Hidden neuron 3: is there an agent nearby?
+    for i in range(9):
+        if i != 4:
+            # excited by any agent
+            brain.W1[InputSchema.ID_OTHER_HEALTH + i, 3] = 10.0
+            # inhibited by similar agents
+            brain.W1[InputSchema.ID_OTHER_DNA + i, 3] = -200.0
+
+    # output: flee
+    brain.W2[3, Action.MOVE_AWAY_FROM_AGENT] = 200.0
+
+
+def inject_predator_genes(brain: Brain):
+    """Ignores food, hunts and attacks agents"""
+    brain.W1.fill(0.0)
+    brain.b1.fill(0.0)
+    brain.W2.fill(0.0)
+    brain.b2.fill(0.0)
+    # Hidden neuron 0: is there an agent nearby?
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_OTHER_HEALTH + i, 0] = 10.0
+            brain.W1[InputSchema.ID_OTHER_DNA + i, 0] = -200.0
+
+    brain.b1[1] = 1.0  # bias for wandering in search of prey
+
+    # output: take and move towards
+    brain.W2[0, Action.TAKE] = 100.0
+    brain.W2[0, Action.MOVE_TOWARDS_AGENT] = 80.0
+    brain.W2[1, Action.MOVE_RANDOM] = 10.0
+
+
+def inject_altruist_genes(brain: Brain):
+    """
+    gathers food, gives if kin nearby, flees from enemies
+    """
+    inject_forager_genes(brain)
+    # Hidden neuron 3: is there a similar agent nearby?
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_OTHER_DNA + i, 3] = 100.0
+
+    # output: give food to kin
+    brain.W2[3, Action.GIVE] = 150.0
+
+    # hidden neuron 4: is enemy nearby?
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_OTHER_HEALTH + i, 4] = 1.0
+            # inhibited by enemy
+            brain.W1[InputSchema.ID_OTHER_DNA + i, 4] = -200.0
+
+    # output: flee from parasites
+    brain.W2[4, Action.MOVE_AWAY_FROM_AGENT] = 200.0
+
+
+def inject_parasite_genes(brain: Brain):
+    """Doesn't gather, sticks to non-kin and takes their health"""
+    brain.W1.fill(0.0)
+    brain.b1.fill(0.0)
+    brain.W2.fill(0.0)
+    brain.b2.fill(0.0)
+
+    # Hidden neuron 0: Is enemy nearby?
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_OTHER_HEALTH + i, 0] = 10.0
+            brain.W1[InputSchema.ID_OTHER_DNA + i, 0] = -200.0
+
+    brain.b1[1] = 1.0  # bias for wandering
+
+    # output: take and stay close
+    brain.W2[0, Action.TAKE] = 100.0
+    brain.W2[0, Action.MOVE_TOWARDS_AGENT] = 50.0
+    brain.W2[1, Action.MOVE_RANDOM] = 10.0
+
+
+################ World Builders
+
+
 def create_deterministic_base(
     repro_threshold,
     repro_cost,
@@ -76,13 +158,13 @@ def create_deterministic_base(
     cooldown,
     prob,
     world_class=World,
-    regrow_density=0.01,
+    regrow_density=0.05,
     regrow_amount=5.0,
 ):
     np.random.seed(SEED)
     random.seed(SEED)
 
-    world = World(
+    world = world_class(
         width=WIDTH,
         height=HEIGHT,
         cost_of_life=1.0,
@@ -96,24 +178,22 @@ def create_deterministic_base(
         init_res_density=0.0,  # start empty, will fill manually for various scenarios
     )
 
-    # place agents in the center
-    center_x, center_y = WIDTH // 2, HEIGHT // 2
-    positions = [
-        (center_x, center_y),
-        (center_x + 1, center_y),
-        (center_x, center_y + 1),
-        (center_x + 1, center_y + 1),
-    ]
-    for x, y in positions:
+    return world
+
+
+def populate_faction(world, x_offset, y_offset, gene_injector, count=4):
+    for i in range(count):
         brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
-        inject_smart_genes(brain)  # smart genes = gatherer genes
+        gene_injector(brain)
 
         agent = Agent(
-            brain, x, y, initial_health=70.0, color=None
-        )  # init health set to trigger reproduction quickly
+            brain,
+            x_offset + (i % 2),
+            y_offset + (i // 2),
+            initial_health=70.0,
+            color=None,
+        )
         world.add_agent(agent)
-
-    return world
 
 
 #################### Failure scenarios ###################################
@@ -125,6 +205,7 @@ def scenario_boomBust_petriDish():
     consume the entire worlds resources and die afterwards
     """
     world = create_deterministic_base(41.0, 40.0, 0, 0, 1.0, regrow_amount=0.0)
+    populate_faction(world, 15, 15, inject_forager_genes)
     world.resource_grid.fill(world.max_resource)  # fill whole world once
     return world
 
@@ -136,6 +217,7 @@ def scenario_boomBust_oasis():
     spot) the new agents out into the "desert"
     """
     world = create_deterministic_base(41.0, 40.0, 0, 0, 1.0, world_class=OasisWorld)
+    populate_faction(world, 15, 15, inject_forager_genes)
     cx, cy = WIDTH // 2, HEIGHT // 2
     world.resource_grid[cx - 5 : cx + 5, cy - 5 : cy + 5] = world.max_resource
     return world
@@ -147,12 +229,13 @@ def scenario_boomBust_apocalypse():
     the population collapses after an initial explosion in cardinality
     """
     world = create_deterministic_base(41.0, 40.0, 0, 0, 1.0, regrow_amount=0.0)
+    populate_faction(world, 15, 15, inject_forager_genes)
     cx, cy = WIDTH // 2, HEIGHT // 2
     world.resource_grid[cx - 5 : cx + 5, cy - 5 : cy + 5] = world.max_resource
     return world
 
 
-##########################################################################
+############# Forager - Reproduction Scenarios ############################
 
 
 def scenario_maturity():
@@ -168,8 +251,8 @@ def scenario_maturity():
         prob=1.0,
         world_class=OasisWorld,
     )
-    cx, cy = WIDTH // 2, HEIGHT // 2
-    world.resource_grid[cx - 5 : cx + 5, cy - 5 : cy + 5] = world.max_resource
+    world.resource_grid[10:20, 10:20] = world.max_resource
+    populate_faction(world, 15, 15, inject_forager_genes)
     return world
 
 
@@ -186,9 +269,8 @@ def scenario_cooldown():
         prob=1.0,
         world_class=OasisWorld,
     )
-    cx, cy = WIDTH // 2, HEIGHT // 2
-    world.resource_grid[cx - 5 : cx + 5, cy - 5 : cy + 5] = world.max_resource
-
+    world.resource_grid[10:20, 10:20] = world.max_resource
+    populate_faction(world, 15, 15, inject_forager_genes)
     return world
 
 
@@ -205,9 +287,8 @@ def scenario_probabilistic():
         prob=0.1,
         world_class=OasisWorld,
     )
-    cx, cy = WIDTH // 2, HEIGHT // 2
-    world.resource_grid[cx - 5 : cx + 5, cy - 5 : cy + 5] = world.max_resource
-
+    world.resource_grid[10:20, 10:20] = world.max_resource
+    populate_faction(world, 15, 15, inject_forager_genes)
     return world
 
 
@@ -224,11 +305,44 @@ def scenario_threshold():
         prob=1.0,
         world_class=OasisWorld,
     )
-    cx, cy = WIDTH // 2, HEIGHT // 2
-    world.resource_grid[cx - 5 : cx + 5, cy - 5 : cy + 5] = world.max_resource
+
+    world.resource_grid[10:20, 10:20] = world.max_resource
+    populate_faction(world, 15, 15, inject_forager_genes)
 
     for agent in world.agents:
         agent.health = 140.0
+
+    return world
+
+
+################## Simil-game-theoretic scenarios #########################
+
+
+def scenario_predator_prey():
+    """
+    Prey gathers food and runs away
+    Predators ignores food and hunts preys
+    """
+
+    world = create_deterministic_base(60.0, 40.0, 10, 5, 1.0, regrow_amount=8.0)
+    world.resource_grid.fill(world.max_resource)
+
+    populate_faction(world, 5, 5, inject_prey_genes, count=10)
+    populate_faction(world, 20, 20, inject_predator_genes, count=4)
+    return world
+
+
+def scenario_altruist_parasite():
+    """
+    Altruist gathers food and share is it with neighbours
+    Parasite doesnt gather, just takes
+    """
+
+    world = create_deterministic_base(60.0, 40.0, 10, 5, 1.0, regrow_amount=5.0)
+    world.resource_grid.fill(world.max_resource)
+
+    populate_faction(world, 10, 10, inject_altruist_genes, count=8)
+    populate_faction(world, 10, 14, inject_parasite_genes, count=2)
 
     return world
 
@@ -245,8 +359,10 @@ if __name__ == "__main__":
     print(" 3: Probabilistic (Chance to reproduce)")
     print(" 4: High Threshold (Must be wealthy)")
     print("=========================================")
+    print(" 5: Predator vs Prey")
+    print(" 6: Altruist and Parasite")
 
-    choice = input("Enter selection (0A, 0B, 0C, 1, 2, 3, 4): ").strip().upper()
+    choice = input("Enter selection (0A, 0B, 0C, 1, 2, 3, 4, 5, 6): ").strip().upper()
 
     scenarios = {
         "0A": scenario_boomBust_petriDish,
@@ -256,6 +372,8 @@ if __name__ == "__main__":
         "2": scenario_cooldown,
         "3": scenario_probabilistic,
         "4": scenario_threshold,
+        "5": scenario_predator_prey,
+        "6": scenario_altruist_parasite,
     }
 
     if choice in scenarios:
