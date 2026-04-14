@@ -20,8 +20,21 @@ class GenerationalWorld(World):
     Includes a food island, "scent", moving storm and epoch-based reproduction
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self,
+            scent_decay = 0.98,
+            scent_diffusion_rate = 0.35,
+            scent_source_strength = 1000.0,
+            scent_diffusion_steps = 3,
+            scent_init_diffusion_steps = 150, 
+            *args, 
+            **kwargs):
         # disable automatic regrowth and continuous reproduction
+        self.scent_decay = scent_decay # persistence (->1 => longer persistence)
+        self.scent_diffusion_rate = scent_diffusion_rate # spread speed (higher => faster)
+        self.scent_source_strength = scent_source_strength # source intensity
+        self.scent_diffusion_steps = scent_diffusion_steps # higher => more spread per tick
+        self.scent_init_diffusion_steps = scent_init_diffusion_steps
         kwargs["regrow_amount"] = 0.0
         kwargs["reproduction_prob"] = 0.0
         kwargs["enable_scent_action"] = True
@@ -46,8 +59,8 @@ class GenerationalWorld(World):
         self.resource_grid.fill(0.0)
 
         self.resource_grid[self.island_start_x :, :] = self.max_resource
-        self.scent_grid[self.island_start_x :, :] = 100.0
-        for _ in range(100):
+        self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
+        for _ in range(self.scent_init_diffusion_steps):
             self.diffuse_scent()
 
     def get_coords(self, x, y):
@@ -77,11 +90,14 @@ class GenerationalWorld(World):
         s_right[1:, :] = s[:-1, :]
 
         # average neighbors and decay
-        new_s = (s_up + s_down + s_left + s_right) / 4.0
-        self.scent_grid = new_s * 0.95
+        neigh_avg = (s_up + s_down + s_left + s_right) / 4.0
+        self.scent_grid = (
+            (1.0 - self.scent_diffusion_rate) * s
+            + self.scent_diffusion_rate * neigh_avg
+        ) * self.scent_decay
 
         # scent at island is constant and strong
-        self.scent_grid[self.island_start_x :, :] = 100.0
+        self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
 
     def evaluate_n_evolve(self):
 
@@ -152,7 +168,8 @@ class GenerationalWorld(World):
                 self.storm_x += 1
 
         # diffuse scent
-        self.diffuse_scent()
+        for _ in range(self.scent_diffusion_steps):
+            self.diffuse_scent()
 
         # standard agent steps (movement, action choice, dying to storm)
         super().update_world()
@@ -167,8 +184,8 @@ class GenerationalWorld(World):
 ###############################################################
 
 
-def create_random_escape_world():
-    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2)
+def create_random_escape_world(**world_kwargs):
+    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2, **world_kwargs)
 
     agents = 0
     while agents < 50:
@@ -183,11 +200,11 @@ def create_random_escape_world():
     return world
 
 
-def create_smart_escape_world():
+def create_smart_escape_world(**world_kwargs):
     """
     Injects "scent tracker" genes
     """
-    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2)
+    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2, **world_kwargs)
 
     agents = 0
     while agents < 50:
@@ -248,22 +265,40 @@ if __name__ == "__main__":
         default=4,
         help="Subsampling step for scent vectors",
     )
+    parser.add_argument("--scent-decay", type=float, default=0.98)
+    parser.add_argument("--scent-diffusion-rate", type=float, default=0.35)
+    parser.add_argument("--scent-source-strength", type=float, default=100.0)
+    parser.add_argument("--scent-diffusion-steps", type=int, default=3)
+    parser.add_argument("--scent-init-diffusion-steps", type=int, default=150)
 
     args = parser.parse_args()
 
-    if args.scenario == "1":
-        print("Starting... It may take 10+ generations before they learn to move Right!")
-        run_visualization(
+    scenario_map = {
+        "1": (
             create_random_escape_world,
-            show_scent_heatmap=args.show_scent_heatmap,
-            show_scent_vectors=args.show_scent_vectors,
-            vector_step=args.vector_step,
-        )
-    elif args.scenario == "2":
-        print("Starting... Watch them follow the pheromones immediately.")
-        run_visualization(
+            "Starting... It may take 10+ generations before they learn to move Right!",
+        ),
+        "2": (
             create_smart_escape_world,
-            show_scent_heatmap=args.show_scent_heatmap,
-            show_scent_vectors=args.show_scent_vectors,
-            vector_step=args.vector_step,
+            "Starting... Watch them follow the pheromones immediately.",
+        ),
+    }
+
+    create_world_fn, start_msg = scenario_map[args.scenario]
+
+    def make_world():
+        return create_world_fn(
+            scent_decay=args.scent_decay,
+            scent_diffusion_rate=args.scent_diffusion_rate,
+            scent_source_strength=args.scent_source_strength,
+            scent_diffusion_steps=args.scent_diffusion_steps,
+            scent_init_diffusion_steps=args.scent_init_diffusion_steps,
         )
+
+    print(start_msg)
+    run_visualization(
+        make_world,
+        show_scent_heatmap=args.show_scent_heatmap,
+        show_scent_vectors=args.show_scent_vectors,
+        vector_step=args.vector_step,
+    )
