@@ -26,7 +26,8 @@ def create_world():
     hidden_dim = HIDDEN_DIM
     output_dim = len(Action)
 
-    for _ in range(INIT_AGENTS):
+    popsize = 0
+    while popsize < INIT_AGENTS:
         brain = Brain(
             input_size=input_dim, hidden_size=hidden_dim, output_size=output_dim
         )
@@ -35,7 +36,8 @@ def create_world():
         color = None
 
         agent = Agent(brain, x, y, initial_health=INIT_HEALTH, color=color)
-        world.add_agent(agent=agent)
+        if world.add_agent(agent=agent):
+            popsize += 1
 
     return world
 
@@ -45,7 +47,7 @@ def run_headless(world_creation_fun=create_world, use_tqdm=True):
     Runs the simulation in headless mode (faster) and saves the results in a csv file
 
     Args:
-        world_creation_fun: Function tha treturns a cinfigured World object
+        world_creation_fun: Function that returns a configured World object
         output_file: Path where the CSV will be saved
     """
     print(f"Starting headless simulation. Total generations: {TOTAL_GENERATIONS}")

@@ -25,6 +25,7 @@ class World:
         reproduction_prob: float = 1.0,
         regrow_density: float = 0.05,
         regrow_amount: float = 5.0,
+        enable_scent_action: bool = False,
     ):
         self.width = width
         self.heigth = height
@@ -39,6 +40,8 @@ class World:
 
         self.regrow_density = regrow_density
         self.regrow_amount = regrow_amount
+
+        self.enable_scent_action = enable_scent_action
 
         self.agents: list[Agent] = []
         self.resource_grid = np.zeros((self.width, self.heigth))
@@ -61,8 +64,11 @@ class World:
         self.resource_grid = np.minimum(self.resource_grid, self.max_resource)
 
     def add_agent(self, agent: Agent):
+        if self.agent_grid[agent.x, agent.y] is not None:
+            return False # occupied cell
         self.agents.append(agent)
         self.agent_grid[agent.x, agent.y] = agent
+        return True
 
     def remove_agent(self, agent: Agent):
         if agent in self.agents:
@@ -75,7 +81,7 @@ class World:
         return int(x % self.width), int(y % self.heigth)
 
     def get_agent_inputs(self, agent):
-        """Here we gather the 28-value input array used in the agent's brain"""
+        """Here we gather the InputSchema.TOTAL_INPUTS-value input array used in the agent's brain"""
         inputs = np.zeros(InputSchema.TOTAL_INPUTS)
         c = 0  # 1d counter since inputs is a 1d vector
 
@@ -101,7 +107,7 @@ class World:
                     dist = np.linalg.norm(
                         np.array(agent.color) - np.array(neighbour.color)
                     )
-                    inputs[InputSchema.ID_OTHER_DNA + c] = max(0, 1.0 - dist)
+                    inputs[InputSchema.ID_OTHER_DNA + c] = max(0, 1.0 - float(dist))
 
                 c += 1
 
@@ -113,6 +119,9 @@ class World:
         """Execute action decided by agent"""
 
         action = Action(action_idx)
+
+        if action == Action.MOVE_TO_SCENT and not self.enable_scent_action:
+            action = Action.WAIT
 
         # log action
         self.last_step_stats[action] += 1

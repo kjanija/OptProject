@@ -24,16 +24,13 @@ INPUT_DIM = InputSchema.TOTAL_INPUTS
 def create_world():
     world = World(WIDTH, HEIGTH, init_res_density=INIT_RES_DENSITY)
 
-    for _ in range(INITIAL_AGENTS):
-        world.add_agent(
-            Agent(
-                Brain(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM),
-                np.random.randint(0, world.width),
-                np.random.randint(0, world.heigth),
-                INIT_HEALTH,
-                color=None,
-            )
-        )
+    popsize = 0
+    while popsize < INITIAL_AGENTS:
+        brain = Brain(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM)
+        x, y = np.random.randint(0, world.width), np.random.randint(0, world.heigth)
+        agent = Agent(brain,x, y, INIT_HEALTH, color=None)
+        if world.add_agent(agent):
+            popsize += 1
 
     return world
 

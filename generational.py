@@ -23,6 +23,7 @@ class GenerationalWorld(World):
         # disable automatic regrowth and continuous reproduction
         kwargs["regrow_amount"] = 0.0
         kwargs["reproduction_prob"] = 0.0
+        kwargs["enable_scent_action"] = True
 
         super().__init__(*args, **kwargs)
 
@@ -31,7 +32,7 @@ class GenerationalWorld(World):
         self.max_ticks = 200
 
         self.island_start_x = self.width - 20
-        self.storm_speed = 10  # storm moves 1 unit every 4 ticks
+        self.storm_speed = 10  # storm moves 1 unit every 10 ticks
 
         # init first epoch
         self._init_epoch()

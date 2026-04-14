@@ -67,14 +67,21 @@ class Brain(BrainModel):
         # commentato perchè spero non sbaglierò a passare gli input
         # if not isinstance(inputs, np.ndarray):
         # inputs = np.array(inputs)
+        x_in = np.asarray(inputs, dtype=np.float32).ravel()
+
+        if x_in.shape[0] < self.input_size:
+            pad = np.zeros(self.input_size - x_in.shape[0], dtype=np.float32)
+            x_in = np.concatenate([x_in, pad])
+        elif x_in.shape[0] > self.input_size:
+            x_in = x_in[: self.input_size]
 
         # forward pass
-        x = np.dot(inputs, self.W1) + self.b1
+        x = np.dot(x_in, self.W1) + self.b1
         x = np.maximum(0, x)  # ReLU
         x = np.dot(x, self.W2) + self.b2
 
         # TODO: argmax basta o devo fare softmax e poi scegliere il massimo?
-        return np.argmax(x)
+        return int(np.argmax(x))
 
     def clone_and_mutate(self, mutation_prob, mutation_amp):
         """

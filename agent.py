@@ -55,6 +55,7 @@ class Agent:
         self.health = initial_health
         self.age = 0
         self.reproduction_cooldown = 0
+        self.fitness = 0.0
 
         if color is None:
             self.color = self._get_color_from_genes()
@@ -70,7 +71,10 @@ class Agent:
         """
         # For this simple xAI segment we focus on the second layer
 
-        def get_strength(action_idx: Action | None):
+        def get_strength(action_idx: Action):
+            idx = int(action_idx)
+            if idx >= self.brain.output_size:
+                return 0.0
             w = self.brain.W2[:, action_idx]
             return np.mean(np.maximum(0, w))
 
