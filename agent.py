@@ -21,6 +21,7 @@ class Action(IntEnum):
     MOVE_AWAY_FROM_AGENT = 5  # Move away from neighbouring agents
     MOVE_TOWARDS_AGENT = 6  # Move towards neighbouring agents
     MOVE_RANDOM = 7  # Random movement
+    MOVE_TO_SCENT = 8
 
 
 class InputSchema:
@@ -32,8 +33,9 @@ class InputSchema:
     ID_OTHER_HEALTH = 9  # Health levels of agents in neighbouring 3x3 grid, 0 if empty
     ID_OTHER_DNA = 18  # Similarity to neighbouring agents, in (0.0, 1.0). Used to model "kinship"/"clans"
     ID_SELF_HEALTH = 27
+    ID_SCENT = 28  # "scent values in 3x3 grid"
 
-    TOTAL_INPUTS = 28
+    TOTAL_INPUTS = 37
 
 
 class Agent:
@@ -45,7 +47,7 @@ class Agent:
     """
 
     def __init__(
-        self, brain: Brain, x: int, y: int, initial_health: float, color: tuple
+        self, brain: Brain, x: int, y: int, initial_health: float, color: tuple | None
     ):
         self.brain = brain
         self.x = int(x)
@@ -73,7 +75,11 @@ class Agent:
             return np.mean(np.maximum(0, w))
 
         r_val = get_strength(Action.TAKE) + get_strength(Action.MOVE_TOWARDS_AGENT)
-        g_val = get_strength(Action.GATHER) + get_strength(Action.MOVE_TO_RESOURCE)
+        g_val = (
+            get_strength(Action.GATHER)
+            + get_strength(Action.MOVE_TO_RESOURCE)
+            + get_strength(Action.MOVE_TO_SCENT)
+        )
         b_val = get_strength(Action.GIVE) + get_strength(Action.MOVE_AWAY_FROM_AGENT)
 
         tot = r_val + g_val + b_val + 1e-06

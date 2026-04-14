@@ -6,6 +6,10 @@ from agent import Action, Agent, InputSchema
 from brain import Brain
 from world import World
 
+SHOW_SCENT_HEATMAP = True
+SHOW_SCENT_VECTORS = False
+VECTOR_STEP = 4
+
 WIDTH = 50
 HEIGTH = 50
 INITIAL_AGENTS = 50
@@ -54,6 +58,34 @@ def run_visualization(world_creation_fun=create_world):
         world.resource_grid.T, cmap="Greens", vmin=0, vmax=5, origin="lower"
     )
 
+    # Optional: Scent Heatmap Overlay
+    scent_img = None
+    if SHOW_SCENT_HEATMAP and hasattr(world, "scent_grid"):
+        scent_img = ax_grid.imshow(
+            world.scent_grid.T,
+            cmap="Purples",
+            vmin=0,
+            vmax=100,
+            origin="lower",
+            alpha=0.4,
+        )
+
+    # Optional: Scent Vector Field (Quiver Plot)
+    quiver = None
+    if SHOW_SCENT_VECTORS and hasattr(world, "scent_grid"):
+        # Create coordinate grids
+        X, Y = np.meshgrid(np.arange(WIDTH), np.arange(HEIGTH))
+
+        # Calculate mathematical gradient (derivative) of the scent
+        dy, dx = np.gradient(world.scent_grid.T)
+
+        # Slice to subsample the arrows and reduce screen clutter
+        skip = (slice(None, None, VECTOR_STEP), slice(None, None, VECTOR_STEP))
+
+        quiver = ax_grid.quiver(
+            X[skip], Y[skip], dx[skip], dy[skip], color="purple", alpha=0.7, pivot="mid"
+        )
+
     # 2. Agents (Scatter Plot)
     agents_scatter = ax_grid.scatter([], [], c=[], s=50, edgecolors="black")
 
@@ -84,6 +116,7 @@ def run_visualization(world_creation_fun=create_world):
         Action.MOVE_AWAY_FROM_AGENT: "#E69F00",  # Orange
         Action.MOVE_TOWARDS_AGENT: "#CC79A7",  # Reddish Purple
         Action.MOVE_RANDOM: "#999999",  # Grey
+        Action.MOVE_TO_SCENT: "#F0E422",  # yellow-ish
     }
 
     # Define linestyles to further distinguish categories (Double Coding)
@@ -99,6 +132,7 @@ def run_visualization(world_creation_fun=create_world):
         Action.MOVE_AWAY_FROM_AGENT: "--",
         Action.MOVE_TOWARDS_AGENT: "--",
         Action.MOVE_RANDOM: ":",
+        Action.MOVE_TO_SCENT: "--",
     }
 
     for action in Action:
@@ -121,6 +155,16 @@ def run_visualization(world_creation_fun=create_world):
 
         # Update Grid Visualization
         resource_img.set_data(world.resource_grid.T)
+
+        # Update Scent Visualization
+        if hasattr(world, "scent_grid"):
+            if scent_img is not None:
+                scent_img.set_data(world.scent_grid.T)
+
+            if quiver is not None:
+                dy, dx = np.gradient(world.scent_grid.T)
+                skip = (slice(None, None, VECTOR_STEP), slice(None, None, VECTOR_STEP))
+                quiver.set_UVC(dx[skip], dy[skip])
 
         if world.agents:
             xs = [a.x for a in world.agents]

@@ -45,6 +45,9 @@ class World:
         self.agent_grid = np.full((self.width, self.heigth), None, dtype=object)
         self.last_step_stats = {action: 0 for action in Action}
 
+        self.scent_grid = np.zeros((self.width, self.heigth))
+        self.storm_x = -1  # initial position of deadly storm
+
         self.resource_regrow(density=init_res_density, amount=10.0)
 
     def resource_regrow(self, density: float = 0.05, amount: float = 5.0):
@@ -84,6 +87,7 @@ class World:
 
                 # energy
                 inputs[InputSchema.ID_ENERGY + c] = self.resource_grid[nx, ny]
+                inputs[InputSchema.ID_SCENT + c] = self.scent_grid[nx, ny]
 
                 # neighbouring agents
                 neighbour = self.agent_grid[nx, ny]
@@ -155,6 +159,16 @@ class World:
                 neighbourhood_energy[best_idx] > 0 and best_idx != 4
             ):  # because idx 4 is self
                 # go back to a 2d type indicization
+                dy = int(best_idx // 3 - 1)
+                dx = int(best_idx % 3 - 1)
+
+                tx, ty = get_neighbor_coords(dx, dy)
+                move_to(tx, ty)
+
+        elif action == Action.MOVE_TO_SCENT:
+            neighborhood_scent = inputs[InputSchema.ID_SCENT : InputSchema.ID_SCENT + 9]
+            best_idx = np.argmax(neighborhood_scent)
+            if neighborhood_scent[best_idx] > 0 and best_idx != 4:
                 dy = int(best_idx // 3 - 1)
                 dx = int(best_idx % 3 - 1)
 
@@ -280,6 +294,10 @@ class World:
 
             # cost of living
             agent.health -= self.cost_of_life
+
+            if agent.x <= self.storm_x:
+                agent.health = 0.0
+
             if agent.health <= 0:
                 self.remove_agent(agent)
                 continue  # if dead, can't reproduce
