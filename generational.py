@@ -1,3 +1,4 @@
+import argparse
 import random
 import sys
 
@@ -222,20 +223,47 @@ def create_smart_escape_world():
 
 
 if __name__ == "__main__":
-    print("=========================================")
-    print("   GENERATIONAL GA SHOWCASE              ")
-    print("=========================================")
-    print("1: Blank Slate (Watch Evolution from scratch)")
-    print("2: Smart Injection (Prove the mechanics work)")
-    print("=========================================")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--scenario",
+        choices=["1", "2"],
+        default="1",
+        help="1 = Blank Slate, 2 = Smart Injection",
+    )
+    parser.add_argument(
+        "--show-scent-heatmap",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Show scent heatmap overlay",
+    )
+    parser.add_argument(
+        "--show-scent-vectors",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Show scent vector field overlay",
+    )
+    parser.add_argument(
+        "--vector-step",
+        type=int,
+        default=4,
+        help="Subsampling step for scent vectors",
+    )
 
-    choice = input("Enter selection (1 or 2): ").strip()
+    args = parser.parse_args()
 
-    if choice == "1":
-        print(
-            "Starting... It may take 10+ generations before they learn to move Right!"
+    if args.scenario == "1":
+        print("Starting... It may take 10+ generations before they learn to move Right!")
+        run_visualization(
+            create_random_escape_world,
+            show_scent_heatmap=args.show_scent_heatmap,
+            show_scent_vectors=args.show_scent_vectors,
+            vector_step=args.vector_step,
         )
-        run_visualization(create_random_escape_world)
-    elif choice == "2":
+    elif args.scenario == "2":
         print("Starting... Watch them follow the pheromones immediately.")
-        run_visualization(create_smart_escape_world)
+        run_visualization(
+            create_smart_escape_world,
+            show_scent_heatmap=args.show_scent_heatmap,
+            show_scent_vectors=args.show_scent_vectors,
+            vector_step=args.vector_step,
+        )

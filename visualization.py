@@ -1,3 +1,4 @@
+import argparse
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -5,10 +6,6 @@ import numpy as np
 from agent import Action, Agent, InputSchema
 from brain import Brain
 from world import World
-
-SHOW_SCENT_HEATMAP = True
-SHOW_SCENT_VECTORS = False
-VECTOR_STEP = 4
 
 WIDTH = 50
 HEIGTH = 50
@@ -38,7 +35,12 @@ def create_world():
 # An LLM was used to help me with the visualization
 
 
-def run_visualization(world_creation_fun=create_world):
+def run_visualization(
+        world_creation_fun=create_world,
+        show_scent_heatmap = True,
+        show_scent_vectors = False,
+        vector_step = 4
+        ):
     world = world_creation_fun()
 
     # Create figure with 2 subplots (Grid on top, Stats on bottom)
@@ -57,7 +59,7 @@ def run_visualization(world_creation_fun=create_world):
 
     # Optional: Scent Heatmap Overlay
     scent_img = None
-    if SHOW_SCENT_HEATMAP and hasattr(world, "scent_grid"):
+    if show_scent_heatmap and hasattr(world, "scent_grid"):
         scent_img = ax_grid.imshow(
             world.scent_grid.T,
             cmap="Purples",
@@ -69,7 +71,7 @@ def run_visualization(world_creation_fun=create_world):
 
     # Optional: Scent Vector Field (Quiver Plot)
     quiver = None
-    if SHOW_SCENT_VECTORS and hasattr(world, "scent_grid"):
+    if show_scent_vectors and hasattr(world, "scent_grid"):
         # Create coordinate grids
         X, Y = np.meshgrid(np.arange(WIDTH), np.arange(HEIGTH))
 
@@ -77,7 +79,7 @@ def run_visualization(world_creation_fun=create_world):
         dy, dx = np.gradient(world.scent_grid.T)
 
         # Slice to subsample the arrows and reduce screen clutter
-        skip = (slice(None, None, VECTOR_STEP), slice(None, None, VECTOR_STEP))
+        skip = (slice(None, None, vector_step), slice(None, None, vector_step))
 
         quiver = ax_grid.quiver(
             X[skip], Y[skip], dx[skip], dy[skip], color="purple", alpha=0.7, pivot="mid"
@@ -160,7 +162,7 @@ def run_visualization(world_creation_fun=create_world):
 
             if quiver is not None:
                 dy, dx = np.gradient(world.scent_grid.T)
-                skip = (slice(None, None, VECTOR_STEP), slice(None, None, VECTOR_STEP))
+                skip = (slice(None, None, vector_step), slice(None, None, vector_step))
                 quiver.set_UVC(dx[skip], dy[skip])
 
         if world.agents:
@@ -209,4 +211,14 @@ def run_visualization(world_creation_fun=create_world):
 
 
 if __name__ == "__main__":
-    run_visualization()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--heatmap", action="store_true", help="Show scent heatmap")
+    parser.add_argument("--vectors", action="store_true", help="Show scent vectors")
+    parser.add_argument("--vector-step", type=int, default=4, help="Vector sampling step")
+    args = parser.parse_args()
+
+    run_visualization(
+        show_scent_heatmap=args.heatmap,
+        show_scent_vectors=args.vectors,
+        vector_step=args.vector_step,
+    )
