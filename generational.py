@@ -24,7 +24,7 @@ class GenerationalWorld(World):
             self,
             scent_decay = 0.98,
             scent_diffusion_rate = 0.35,
-            scent_source_strength = 1000.0,
+            scent_source_strength = 100.0,
             scent_diffusion_steps = 3,
             scent_init_diffusion_steps = 150, 
             *args, 
@@ -45,7 +45,7 @@ class GenerationalWorld(World):
         self.tick = 0
         self.max_ticks = 200
 
-        self.island_start_x = self.width - 20
+        self.island_start_x = self.width - 5
         self.storm_speed = 10  # storm moves 1 unit every 10 ticks
 
         # init first epoch
@@ -266,7 +266,7 @@ if __name__ == "__main__":
         help="Subsampling step for scent vectors",
     )
     parser.add_argument("--scent-decay", type=float, default=0.98)
-    parser.add_argument("--scent-diffusion-rate", type=float, default=0.35)
+    parser.add_argument("--scent-diffusion-rate", type=float, default=1)
     parser.add_argument("--scent-source-strength", type=float, default=100.0)
     parser.add_argument("--scent-diffusion-steps", type=int, default=3)
     parser.add_argument("--scent-init-diffusion-steps", type=int, default=150)

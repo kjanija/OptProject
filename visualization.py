@@ -2,6 +2,7 @@ import argparse
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LogNorm
 
 from agent import Action, Agent, InputSchema
 from brain import Brain
@@ -39,9 +40,17 @@ def run_visualization(
         world_creation_fun=create_world,
         show_scent_heatmap = True,
         show_scent_vectors = False,
-        vector_step = 4
+        vector_step = 4,
+        scent_heatmap_vmin: float = 1e-2,
+        scent_heatmap_alpha: float = 0.55,
+        scent_vector_gain: float = 25.0,
+        scent_vector_use_log: bool = True,
         ):
     world = world_creation_fun()
+
+    scent_data = world.scent_grid.T
+    scent_vmax = max(float(np.max(scent_data)), scent_heatmap_vmin * 10.0)
+    scent_norm = LogNorm(vmin=scent_heatmap_vmin, vmax=scent_vmax)
 
     # Create figure with 2 subplots (Grid on top, Stats on bottom)
     fig, (ax_grid, ax_stats) = plt.subplots(
@@ -61,12 +70,12 @@ def run_visualization(
     scent_img = None
     if show_scent_heatmap and hasattr(world, "scent_grid"):
         scent_img = ax_grid.imshow(
-            world.scent_grid.T,
+            np.ma.masked_less_equal(world.scent_grid.T, 0.0),
             cmap="Purples",
-            vmin=0,
-            vmax=100,
+            norm=scent_norm,
             origin="lower",
-            alpha=0.4,
+            alpha=scent_heatmap_alpha,
+            zorder=2,
         )
 
     # Optional: Scent Vector Field (Quiver Plot)
@@ -76,13 +85,24 @@ def run_visualization(
         X, Y = np.meshgrid(np.arange(WIDTH), np.arange(HEIGTH))
 
         # Calculate mathematical gradient (derivative) of the scent
-        dy, dx = np.gradient(world.scent_grid.T)
+        scent_field = np.log1p(world.scent_grid.T) if scent_vector_use_log else world.scent_grid.T
+        dy, dx = np.gradient(scent_field)
 
         # Slice to subsample the arrows and reduce screen clutter
         skip = (slice(None, None, vector_step), slice(None, None, vector_step))
 
         quiver = ax_grid.quiver(
-            X[skip], Y[skip], dx[skip], dy[skip], color="purple", alpha=0.7, pivot="mid"
+            X[skip],
+            Y[skip],
+            dx[skip] * scent_vector_gain,
+            dy[skip] * scent_vector_gain,
+            color="purple",
+            alpha=0.8,
+            pivot="mid",
+            angles="xy",
+            scale_units="xy",
+            scale=1,
+            zorder=3,
         )
 
     # 2. Agents (Scatter Plot)
@@ -158,12 +178,15 @@ def run_visualization(
         # Update Scent Visualization
         if hasattr(world, "scent_grid"):
             if scent_img is not None:
+                scent_vmax = max(float(np.max(world.scent_grid)), scent_heatmap_vmin * 10.0)
+                scent_img.set_norm(LogNorm(vmin=scent_heatmap_vmin, vmax=scent_vmax))
                 scent_img.set_data(world.scent_grid.T)
 
             if quiver is not None:
-                dy, dx = np.gradient(world.scent_grid.T)
+                scent_field = np.log1p(world.scent_grid.T) if scent_vector_use_log else world.scent_grid.T
+                dy, dx = np.gradient(scent_field)
                 skip = (slice(None, None, vector_step), slice(None, None, vector_step))
-                quiver.set_UVC(dx[skip], dy[skip])
+                quiver.set_UVC(dx[skip] * scent_vector_gain, dy[skip] * scent_vector_gain)
 
         if world.agents:
             xs = [a.x for a in world.agents]
