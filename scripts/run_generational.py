@@ -1,29 +1,20 @@
+import argparse
 from pathlib import Path
 import sys
 
-_SRC_PATH = Path(__file__).resolve().parent / "src"
-if _SRC_PATH.exists() and str(_SRC_PATH) not in sys.path:
-    sys.path.insert(0, str(_SRC_PATH))
+_ROOT = Path(__file__).resolve().parents[1]
+_SRC = _ROOT / "src"
+if _SRC.exists() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
-from optproject.environments.generational_world import (  # noqa: E402
-    GenerationalWorld,
-)
-from optproject.scenarios.generational_scenarios import (  # noqa: E402
+from optproject.runners.visualization_runner import run_visualization # noqa: E402
+from optproject.scenarios.generational_scenarios import ( # noqa: E402
     create_random_escape_world,
     create_smart_escape_world,
 )
-from optproject.runners.visualization_runner import run_visualization  # noqa: E402
-
-__all__ = [
-    "GenerationalWorld",
-    "create_random_escape_world",
-    "create_smart_escape_world",
-]
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--scenario",

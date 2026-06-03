@@ -1,17 +1,13 @@
 from pathlib import Path
 import sys
 
-_SRC_PATH = Path(__file__).resolve().parent / "src"
-if _SRC_PATH.exists() and str(_SRC_PATH) not in sys.path:
-    sys.path.insert(0, str(_SRC_PATH))
+_ROOT = Path(__file__).resolve().parents[1]
+_SRC = _ROOT / "src"
+if _SRC.exists() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
-from optproject.runners.visualization_runner import run_visualization  # noqa: E402
-from optproject.scenarios.showcase_scenarios import (  # noqa: E402
-    inject_altruist_genes,
-    inject_forager_genes,
-    inject_parasite_genes,
-    inject_predator_genes,
-    inject_prey_genes,
+from optproject.runners.visualization_runner import run_visualization # noqa: E402
+from optproject.scenarios.showcase_scenarios import ( # noqa: E402
     scenario_altruist_parasite,
     scenario_boomBust_apocalypse,
     scenario_boomBust_oasis,
@@ -22,23 +18,6 @@ from optproject.scenarios.showcase_scenarios import (  # noqa: E402
     scenario_probabilistic,
     scenario_threshold,
 )
-
-__all__ = [
-    "inject_altruist_genes",
-    "inject_forager_genes",
-    "inject_parasite_genes",
-    "inject_predator_genes",
-    "inject_prey_genes",
-    "scenario_altruist_parasite",
-    "scenario_boomBust_apocalypse",
-    "scenario_boomBust_oasis",
-    "scenario_boomBust_petriDish",
-    "scenario_cooldown",
-    "scenario_maturity",
-    "scenario_predator_prey",
-    "scenario_probabilistic",
-    "scenario_threshold",
-]
 
 
 def main():

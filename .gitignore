@@ -1,4 +1,27 @@
-venv/
-__pycache__
 pyrightconfig.json
-experiment_data.csv
+
+# Standard Python ignores
+*.pyc
+__pycache__/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore data files
+*.csv
+*.json
+*.xlsx
+
+# Ignore logs
+logs/
+.logs/
+
+# miscelaneous files to ignore
+.DS_Store
+
+# Ignore the .vscode directory
+.vscode/

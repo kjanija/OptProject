@@ -35,9 +35,14 @@ Runs the simulation with a population of randomly initialized agents in a standa
 python visualization.py
 ```
 
+Note: The original entrypoints above remain supported. New equivalents are in
+the scripts folder: scripts/run_showcase.py, scripts/run_headless.py, and
+scripts/run_generational.py.
+
 ## Project Structure
 
-- `world.py`: the environment engine. Handles 2D toroidal grid, resource regrowth and main step loop (aging, metabolism, reproduction, actions).
-- `agent.py`: biological unit. Manages health, position, reproduction and the genetic color-mapping.
-- `brain.py`: contains the `BrainModel` interface and the Brain (Feed forward NN) implementation. Handles `predict` and `clone_and_mutate`.
-- `showcase.py`: hardcoded smart genes and custom world setup to explicitly demonstrate specific evolutionary mechanics.
+- Core logic lives under src/optproject/core/ (actions, schema, agent, brain, world_base).
+- Environments in src/optproject/environments/ (classic, oasis, generational worlds).
+- Scenario builders in src/optproject/scenarios/ for showcase and generational runs.
+- Runners in src/optproject/runners/ for visualization and headless execution.
+- scripts/ contains CLI entrypoints mirroring the original scripts.
