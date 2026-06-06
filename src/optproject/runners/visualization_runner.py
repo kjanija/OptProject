@@ -50,6 +50,7 @@ def run_visualization(
     scent_vector_use_log: bool = True,
 ):
     world = world_creation_fun()
+    animation_handle = {"ani": None}
 
     scent_data = world.scent_grid.T
     scent_vmax = max(float(np.max(scent_data)), scent_heatmap_vmin * 10.0)
@@ -177,6 +178,13 @@ def run_visualization(
         for _ in range(STEPS_PER_FRAME):
             world.update_world()
 
+        if not world.agents:
+            stats_text.set_text(f"Gen: {frame}\nPop: 0\nExtinct")
+            ani = animation_handle["ani"]
+            if ani is not None:
+                ani.event_source.stop()
+            return resource_img, agents_scatter, stats_text, *lines.values()
+
         # Update Grid Visualization
         resource_img.set_data(world.resource_grid.T)
 
@@ -238,6 +246,7 @@ def run_visualization(
     ani = animation.FuncAnimation(
         fig, update, interval=50, blit=False, cache_frame_data=False
     )
+    animation_handle["ani"] = ani
     plt.tight_layout()
     plt.show()
     return ani
