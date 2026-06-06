@@ -235,9 +235,12 @@ def run_visualization(
 
         return resource_img, agents_scatter, stats_text, *lines.values()
 
-    animation.FuncAnimation(fig, update, interval=50, blit=False, cache_frame_data=False)
+    ani = animation.FuncAnimation(
+        fig, update, interval=50, blit=False, cache_frame_data=False
+    )
     plt.tight_layout()
     plt.show()
+    return ani
 
 
 def main():

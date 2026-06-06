@@ -16,7 +16,7 @@ pip install numpy matplotlib tqdm
 To simply run one of the predefined simulation scenarios, run:
 
 ```python
-python showcase.py
+python scripts/run_showcase.py
 ```
 
 ### 2. Headless
@@ -24,7 +24,7 @@ python showcase.py
 Use this script to run headless simulations for statistical analysis. GUI is disabled, so it is faster. For now it saves action frequencies and population sizes in a CSV file. Saving entire trajectories is under consideration
 
 ```python
-python headless.py
+python scripts/run_headless.py
 ```
 
 ### 3. Default Random Simulation
@@ -32,12 +32,14 @@ python headless.py
 Runs the simulation with a population of randomly initialized agents in a standard world.
 
 ```python
-python visualization.py
+python -m optproject.runners.visualization_runner
 ```
 
-Note: The original entrypoints above remain supported. New equivalents are in
-the scripts folder: scripts/run_showcase.py, scripts/run_headless.py, and
-scripts/run_generational.py.
+Generational demo:
+
+```python
+python scripts/run_generational.py
+```
 
 ## Project Structure
 
