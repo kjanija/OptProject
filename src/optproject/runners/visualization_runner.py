@@ -63,7 +63,7 @@ def run_visualization(
     ax_grid.set_title("Co-evolution Grid World")
     ax_stats.set_title("Action Distribution (Last Step)")
     ax_stats.set_ylabel("Count")
-    ax_stats.set_xlabel("Generation")
+    ax_stats.set_xlabel("Step")
 
     # 1. Resource Grid (Image)
     resource_img = ax_grid.imshow(
@@ -178,8 +178,13 @@ def run_visualization(
         for _ in range(STEPS_PER_FRAME):
             world.update_world()
 
+        if hasattr(world, "generation"):
+            step_label = f"Gen: {getattr(world, 'generation', 0)} | Step: {getattr(world, 'tick', frame)}"
+        else:
+            step_label = f"Step: {frame}"
+
         if not world.agents:
-            stats_text.set_text(f"Gen: {frame}\nPop: 0\nExtinct")
+            stats_text.set_text(f"{step_label}\nPop: 0\nExtinct")
             ani = animation_handle["ani"]
             if ani is not None:
                 ani.event_source.stop()
@@ -215,9 +220,7 @@ def run_visualization(
             agents_scatter.set_offsets(np.empty((0, 2)))
 
         avg_health = np.mean([a.health for a in world.agents]) if world.agents else 0
-        stats_text.set_text(
-            f"Gen: {frame}\nPop: {len(world.agents)}\nHealth: {avg_health:.1f}"
-        )
+        stats_text.set_text(f"{step_label}\nPop: {len(world.agents)}\nHealth: {avg_health:.1f}")
 
         # Update Stats Chart
         x_data.append(frame)
