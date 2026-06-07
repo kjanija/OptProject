@@ -7,6 +7,7 @@ from ..core.agent import Agent
 from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
+from ..utils.nsga2 import get_nsga2_elites
 
 
 class GenerationalWorld(World):
@@ -96,6 +97,18 @@ class GenerationalWorld(World):
         # scent at island is constant and strong
         self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
 
+    def __calculate_objectives(self):
+        """
+        Calculates normalized distance and health as separate objectives
+        """
+        max_health = max([a.health for a in self.agents]) if self.agents else 1.0
+        max_health = max(max_health, 1.0)
+        max_x = float(self.width)
+
+        for a in self.agents:
+            a.norm_x =  a.x / max_x  # type: ignore
+            a.norm_h = a.health / max_health # type: ignore
+
     def evaluate_n_evolve(self):
 
         if not self.agents:
@@ -113,24 +126,16 @@ class GenerationalWorld(World):
 
         else:
             # FITNESS
-            max_health = max([a.health for a in self.agents]) if self.agents else 1.0
-            max_health = max(max_health, 1.0)
-            max_x = float(self.width)
+            self.__calculate_objectives()
 
-            for a in self.agents:
-                norm_x = a.x / max_x
-                norm_h = a.health / max_health
-                a.fitness = (norm_x + norm_h) / 2.0
+            # ELITISM (NSGA-II)
+            top_agents = get_nsga2_elites(self.agents, 10)
 
-            self.agents.sort(key=lambda a: a.fitness, reverse=True)
-
-            best_agent = self.agents[0]
+            best_agent = top_agents[0]
             print(
-                f"Gen {self.generation} | Survivors {len(self.agents)} | fittest Distance {max_x} | fittest health {best_agent.health:.1f} | Fitest: {best_agent.fitness:.3f}"
+                f"Gen {self.generation} | Survivors {len(self.agents)} | "
+                f"Best Front Rep - Distance {best_agent.norm_x:.2f} | Health {best_agent.norm_h:.2f}"
             )
-
-            # ELITISM
-            top_agents = self.agents[: min(10, len(self.agents))]
 
             # reproduce
             self.agents = []
