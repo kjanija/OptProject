@@ -11,6 +11,8 @@ from optproject.runners.visualization_runner import run_visualization # noqa: E4
 from optproject.scenarios.generational_scenarios import ( # noqa: E402
     create_random_escape_world,
     create_smart_escape_world,
+    create_two_island_world,
+    create_competitive_world
 )
 
 
@@ -18,9 +20,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--scenario",
-        choices=["1", "2"],
+        choices=["1", "2", "3", "4"],
         default="1",
-        help="1 = Blank Slate, 2 = Smart Injection",
+        help="1 = Blank Slate, 2 = Smart Injection, 3 = Two Island, 4 = Competitive",
     )
     parser.add_argument(
         "--show-scent-heatmap",
@@ -56,6 +58,14 @@ def main():
         "2": (
             create_smart_escape_world,
             "Starting... Watch them follow the pheromones immediately.",
+        ),
+        "3": (
+            create_two_island_world,
+            "Starting... They must navigate between two islands!",
+        ),
+        "4": (
+            create_competitive_world,
+            "Starting... Watch the hunters and migrators compete!",
         ),
     }
 

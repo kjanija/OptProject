@@ -5,6 +5,8 @@ from ..core.agent import Agent
 from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..environments.generational_world import GenerationalWorld
+from ..environments.twoisland_world import TwoIslandWorld
+from ..environments.competitive_world import CompetitiveWorld
 
 WIDTH = 50
 HEIGHT = 50
@@ -62,4 +64,79 @@ def create_smart_escape_world(**world_kwargs):
             world.add_agent(agent)
             agents += 1
 
+    return world
+
+def create_two_island_world(**world_kwargs):
+    world = TwoIslandWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2, **world_kwargs)
+    
+    agents = 0
+    while agents < 50:
+        nx = random.randint(0, 3)
+        ny = random.randint(0, HEIGHT - 1)
+        if world.agent_grid[nx, ny] is None:
+            brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
+            agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+            world.add_agent(agent)
+            agents += 1
+            
+    return world
+
+def inject_migrator_genes(brain: Brain):
+    """Incentivizes moving to scent. xAI will color them heavily GREEN"""
+    brain.W1.fill(0.0)
+    brain.b1.fill(0.0)
+    brain.W2.fill(0.0)
+    brain.b2.fill(0.0)
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_SCENT + i, 0] = 1.0
+    brain.W2[0, Action.MOVE_TO_SCENT] = 100.0
+    brain.W2[1, Action.MOVE_RANDOM] = 5.0 # baseline
+
+def inject_hunter_genes(brain: Brain):
+    """Incentivizes taking from agents. xAI will color them heavily RED"""
+    brain.W1.fill(0.0)
+    brain.b1.fill(0.0)
+    brain.W2.fill(0.0)
+    brain.b2.fill(0.0)
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_OTHER_HEALTH + i, 0] = 10.0
+    brain.W2[0, Action.TAKE] = 100.0
+    brain.W2[0, Action.MOVE_TOWARDS_AGENT] = 80.0
+    brain.W2[1, Action.MOVE_RANDOM] = 10.0 # baseline
+
+def create_competitive_world(**world_kwargs):
+    # Higher cost of life forces Hunters to attack to survive
+    world = CompetitiveWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.6, **world_kwargs)
+    
+    # Spawn 40 Migrators
+    migrators = 0
+    while migrators < 40:
+        nx = random.randint(0, 3)
+        ny = random.randint(0, HEIGHT - 1)
+        if world.agent_grid[nx, ny] is None:
+            brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
+            inject_migrator_genes(brain)
+            agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+            # Attach faction tag for the evaluator
+            agent.faction = "migrator" # type: ignore
+            world.add_agent(agent)
+            migrators += 1
+            
+    # Spawn 10 Hunters
+    hunters = 0
+    while hunters < 10:
+        nx = random.randint(15, 20)
+        ny = random.randint(0, HEIGHT - 1)
+        if world.agent_grid[nx, ny] is None:
+            brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
+            inject_hunter_genes(brain)
+            # Starting health is 40. They must hunt to survive!
+            agent = Agent(brain, nx, ny, initial_health=40.0, color=None)
+            # Attach faction tag for the evaluator
+            agent.faction = "hunter" # type: ignore
+            world.add_agent(agent)
+            hunters += 1
+            
     return world

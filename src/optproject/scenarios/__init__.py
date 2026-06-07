@@ -1,4 +1,4 @@
-from .generational_scenarios import create_random_escape_world, create_smart_escape_world
+from .generational_scenarios import create_random_escape_world, create_smart_escape_world, create_two_island_world, create_competitive_world
 from .showcase_scenarios import (
     scenario_altruist_parasite,
     scenario_boomBust_apocalypse,
@@ -23,4 +23,6 @@ __all__ = [
     "scenario_predator_prey",
     "scenario_probabilistic",
     "scenario_threshold",
+    "create_two_island_world",
+    "create_competitive_world"
 ]

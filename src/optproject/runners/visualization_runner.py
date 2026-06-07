@@ -290,7 +290,7 @@ def run_visualization(
     ani = animation.FuncAnimation(
         fig, update, interval=50, blit=False, cache_frame_data=False
     )
-    animation_handle["ani"] = ani
+    animation_handle["ani"] = ani # type: ignore
     plt.tight_layout()
     plt.show()
     return ani
