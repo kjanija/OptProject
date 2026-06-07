@@ -160,6 +160,19 @@ def run_visualization(
         Action.MOVE_TO_SCENT: "--",
     }
 
+    # Define markers to pair with the colors (Double Encoding)
+    action_markers = {
+        Action.GATHER: "o",               # Circle
+        Action.GIVE: "s",                 # Square
+        Action.TAKE: "^",                 # Triangle Up
+        Action.WAIT: "x",                 # Cross
+        Action.MOVE_TO_RESOURCE: "D",     # Diamond
+        Action.MOVE_AWAY_FROM_AGENT: "v", # Triangle Down
+        Action.MOVE_TOWARDS_AGENT: "p",   # Pentagon
+        Action.MOVE_RANDOM: "*",          # Star
+        Action.MOVE_TO_SCENT: "h",        # Hexagon
+    }
+
     for action in Action:
         (line,) = ax_stats.plot(
             [],
@@ -167,11 +180,39 @@ def run_visualization(
             label=action.name,
             color=action_colors.get(action, "black"),
             linestyle=action_styles.get(action, "-"),
+            marker=action_markers.get(action, ""),
+            markersize=6,
+            markevery=5,  # Only draw a marker every 5 steps so it doesn't get cluttered
             linewidth=2,
-        )  # Increased linewidth for better visibility
+        ) 
         lines[action] = line
 
-    ax_stats.legend(loc="upper right", fontsize="small", ncol=2)
+    # Generate the legend
+    leg = ax_stats.legend(loc="upper right", fontsize="small", ncol=2)
+
+    # --- MAKE LEGEND INTERACTIVE ---
+    # Map the legend lines to the actual plot lines
+    lined = {}
+    for legline, origline in zip(leg.get_lines(), lines.values()):
+        legline.set_picker(True)  # Enable clicking on the legend line
+        legline.set_pickradius(5) # Make it easier to click
+        lined[legline] = origline
+
+    def on_pick(event):
+        # On the click event, find which legend item was clicked
+        legline = event.artist
+        origline = lined[legline]
+        
+        # Toggle the visibility of the actual plot line
+        visible = not origline.get_visible()
+        origline.set_visible(visible)
+        
+        # Dim the legend item to show it is muted
+        legline.set_alpha(1.0 if visible else 0.2)
+        fig.canvas.draw()
+
+    # Connect the click event to the figure
+    fig.canvas.mpl_connect('pick_event', on_pick)
 
     def update(frame):
         # Run Simulation
