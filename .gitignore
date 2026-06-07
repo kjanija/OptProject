@@ -11,6 +11,10 @@ __pycache__/
 venv/
 env/
 
+# data files
+data/
+checkpoints/
+
 # Ignore data files
 *.csv
 *.json

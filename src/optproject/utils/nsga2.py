@@ -10,15 +10,17 @@ def get_nsga2_elites(agents: list[Agent], num_elites: int) -> list[Agent]:
 
     num_elites = min(num_elites, len(agents))
 
-    problem = Problem(1, 2)
+    problem = Problem(1, 3)  # 1 decision variable (agent), 3 objectives (distance, health, age)
     
     solutions = []
 
     # map custom agents to platypus solutions
     for agent in agents:
         sol = Solution(problem)
+        # we negate because platypus minimizes by default
         sol.objectives[0] = -agent.norm_x  # type: ignore
         sol.objectives[1] = -agent.norm_h   # type: ignore
+        sol.objectives[2] = -agent.norm_age # type: ignore
         sol.agent = agent
         solutions.append(sol)
 

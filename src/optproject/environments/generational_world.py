@@ -114,10 +114,12 @@ class GenerationalWorld(World):
         max_health = max([a.health for a in pool]) if pool else 1.0
         max_health = max(max_health, 1.0)
         max_x = float(self.width)
+        max_age = float(self.max_ticks)
 
         for a in pool:
             a.norm_x =  a.x / max_x  # type: ignore
             a.norm_h = max(0, a.health) / max_health # type: ignore
+            a.norm_age = a.age / max_age  # type: ignore
 
     def evaluate_n_evolve(self):
 
@@ -145,8 +147,10 @@ class GenerationalWorld(World):
 
             best_agent = top_agents[0]
             print(
-                f"Gen {self.generation} | Survivors {len(self.agents)} | "
-                f"Best Front Rep - Distance {best_agent.norm_x:.2f} | Health {best_agent.norm_h:.2f}" # type: ignore
+                f"Gen {self.generation:3d} | Pool {len(evaluation_pool)} | Survivors {len(self.agents)} | "
+                f"Best Front Rep -> Dist: {best_agent.norm_x:.2f} | " # type: ignore
+                f"Health: {best_agent.norm_h:.2f} | " # type: ignore
+                f"Age: {best_agent.norm_age:.2f}" # type: ignore
             )
 
             # reproduce
