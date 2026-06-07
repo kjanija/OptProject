@@ -1,6 +1,8 @@
 from platypus import Problem, Solution, nondominated_sort, crowding_distance
 
-def get_nsga2_elites(agents, num_elites):
+from optproject.core.agent import Agent
+
+def get_nsga2_elites(agents: list[Agent], num_elites: int) -> list[Agent]:
     """
     Uses platypus to perform non dominated sorting and crowding distance 
     calculation to select elites
@@ -15,8 +17,8 @@ def get_nsga2_elites(agents, num_elites):
     # map custom agents to platypus solutions
     for agent in agents:
         sol = Solution(problem)
-        sol.objectives[0] = -agent.norm_x  # We negate because we want to maximize
-        sol.objectives[1] = -agent.norm_h
+        sol.objectives[0] = -agent.norm_x  # type: ignore
+        sol.objectives[1] = -agent.norm_h   # type: ignore
         sol.agent = agent
         solutions.append(sol)
 

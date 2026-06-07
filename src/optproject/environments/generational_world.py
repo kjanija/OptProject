@@ -33,6 +33,7 @@ class GenerationalWorld(World):
         self.scent_source_strength = scent_source_strength  # source intensity
         self.scent_diffusion_steps = scent_diffusion_steps  # higher => more spread per tick
         self.scent_init_diffusion_steps = scent_init_diffusion_steps
+        self.graveyard = []  # track dead agents for survival bias when ranking
         kwargs["regrow_amount"] = 0.0
         kwargs["reproduction_prob"] = 0.0
         kwargs["enable_scent_action"] = True
@@ -55,11 +56,20 @@ class GenerationalWorld(World):
         self.storm_x = -1
         self.scent_grid.fill(0.0)
         self.resource_grid.fill(0.0)
+        self.graveyard.clear()
 
         self.resource_grid[self.island_start_x :, :] = self.max_resource
         self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
         for _ in range(self.scent_init_diffusion_steps):
             self.diffuse_scent()
+
+    def remove_agent(self, agent):
+        """
+        Override to save dead agents for evaluation before removing them from 
+        the grid
+        """
+        self.graveyard.append(agent)
+        super().remove_agent(agent)
 
     def get_coords(self, x, y):
         """
@@ -97,21 +107,23 @@ class GenerationalWorld(World):
         # scent at island is constant and strong
         self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
 
-    def __calculate_objectives(self):
+    def __calculate_objectives(self, pool):
         """
         Calculates normalized distance and health as separate objectives
         """
-        max_health = max([a.health for a in self.agents]) if self.agents else 1.0
+        max_health = max([a.health for a in pool]) if pool else 1.0
         max_health = max(max_health, 1.0)
         max_x = float(self.width)
 
-        for a in self.agents:
+        for a in pool:
             a.norm_x =  a.x / max_x  # type: ignore
-            a.norm_h = a.health / max_health # type: ignore
+            a.norm_h = max(0, a.health) / max_health # type: ignore
 
     def evaluate_n_evolve(self):
 
-        if not self.agents:
+        evaluation_pool = self.agents + self.graveyard
+
+        if len(evaluation_pool) < 2: # not enough agents for selection, etc..
             print(f"Gen {self.generation}: Extinction. Respawning random mutants")
             self.agents = []
             self.agent_grid.fill(None)
@@ -126,15 +138,15 @@ class GenerationalWorld(World):
 
         else:
             # FITNESS
-            self.__calculate_objectives()
+            self.__calculate_objectives(evaluation_pool)
 
             # ELITISM (NSGA-II)
-            top_agents = get_nsga2_elites(self.agents, 10)
+            top_agents = get_nsga2_elites(evaluation_pool, 10)
 
             best_agent = top_agents[0]
             print(
                 f"Gen {self.generation} | Survivors {len(self.agents)} | "
-                f"Best Front Rep - Distance {best_agent.norm_x:.2f} | Health {best_agent.norm_h:.2f}"
+                f"Best Front Rep - Distance {best_agent.norm_x:.2f} | Health {best_agent.norm_h:.2f}" # type: ignore
             )
 
             # reproduce
