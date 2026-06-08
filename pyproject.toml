@@ -1,3 +1,16 @@
+[project]
+name = "optproject"
+version = "0.1.0"
+description = "A grid-based artificial life simulation exploring Co-Evolution and Game Theory."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "tqdm>=4.65.0",
+    "pandas>=2.0.0",
+    "platypus-opt>=1.0.4"
+]
+
 [tool.black]
 line-length = 88  
 target-version = ['py313'] 
