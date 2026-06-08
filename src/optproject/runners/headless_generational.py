@@ -11,7 +11,7 @@ from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
 
-from ..scenarios.generational_scenarios import create_random_escape_world, create_smart_escape_world
+from ..scenarios.generational_scenarios import create_random_escape_world, create_smart_escape_world, create_two_island_world
 
 WIDTH = 50
 HEIGTH = 50
