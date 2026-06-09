@@ -131,6 +131,30 @@ class World:
         if action == Action.MOVE_TO_SCENT and not self.enable_scent_action:
             action = Action.WAIT
 
+        # --- VALIDITY CHECKS ---
+        # If an agent attempts an action that is contextually impossible,
+        # we fall back to WAIT so our statistics reflect actual successful behavior.
+        is_valid = True
+        
+        if action == Action.GATHER:
+            if self.resource_grid[agent.x, agent.y] <= 0:
+                is_valid = False
+        elif action == Action.MOVE_TO_RESOURCE:
+            if np.max(inputs[InputSchema.ID_ENERGY : InputSchema.ID_ENERGY + 9]) <= 0:
+                is_valid = False
+        elif action == Action.MOVE_TO_SCENT:
+            if np.max(inputs[InputSchema.ID_SCENT : InputSchema.ID_SCENT + 9]) <= 0:
+                is_valid = False
+        elif action in (Action.MOVE_TOWARDS_AGENT, Action.MOVE_AWAY_FROM_AGENT, Action.TAKE):
+            if np.max(inputs[InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9]) <= 0:
+                is_valid = False
+        elif action == Action.GIVE:
+            if np.max(inputs[InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9]) <= 0 or agent.health <= 10:
+                is_valid = False
+
+        if not is_valid:
+            action = Action.WAIT
+
         # log action
         self.last_step_stats[action] += 1
 
