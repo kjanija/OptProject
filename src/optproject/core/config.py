@@ -22,6 +22,7 @@ HIDDEN_DIM = 10
 COST_OF_LIFE = 0.4
 GIVE_AMOUNT = 10.0
 TAKE_AMOUNT = 10.0
+TAKE_COST_FRAC = 0.4
 
 # --- Reproduction & Evolution Settings ---
 REPRODUCTION_THRESHOLD = 75.0 # Health required to reproduce (in non-generational worlds)
@@ -46,12 +47,12 @@ SCENT_DIFFUSION_STEPS = 3
 SCENT_INIT_DIFFUSION_STEPS = 150
 
 # --- Training / Runner Settings ---
-TOTAL_GENERATIONS = 2000
+TOTAL_GENERATIONS = 10
 OUTPUT_FILE = "experiment_data.csv"
 
 # --- Checkpointing Settings ---
 CHECKPOINT_DIR = "checkpoints"
-CHECKPOINT_INTERVAL = 100
+CHECKPOINT_INTERVAL = 2
 MILESTONE_THRESHOLD = 0.95 # Save if an agent reaches N% of the distance
 
 # --- Visualization Settings ---

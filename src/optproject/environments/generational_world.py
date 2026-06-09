@@ -176,7 +176,3 @@ class GenerationalWorld(World):
 
         # standard agent steps (movement, action choice, dying to storm)
         super().update_world()
-
-        # generational evaluation
-        if self.tick >= self.max_ticks or not self.agents:
-            self.evaluate_n_evolve()

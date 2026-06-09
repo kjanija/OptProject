@@ -116,6 +116,11 @@ def run_visualization(
     # 2. Agents (Scatter Plot)
     agents_scatter = ax_grid.scatter([], [], c=[], s=50, edgecolors="black", zorder=5)
 
+    # Storm Line
+    storm_line = None
+    if hasattr(world, "storm_x"):
+        storm_line = ax_grid.axvline(x=world.storm_x, color="red", linestyle="--", linewidth=2, zorder=6, alpha=0.8)
+
     # 3. Stats Text
     stats_text = ax_grid.text(
         0.02,
@@ -220,6 +225,9 @@ def run_visualization(
         # Run Simulation
         for _ in range(STEPS_PER_FRAME):
             world.update_world()
+            if hasattr(world, "evaluate_n_evolve"):
+                if world.tick >= getattr(world, "max_ticks", float("inf")) or not world.agents:
+                    world.evaluate_n_evolve()
 
         if hasattr(world, "generation"):
             step_label = f"Gen: {getattr(world, 'generation', 0)} | Step: {getattr(world, 'tick', frame)}"
@@ -261,6 +269,10 @@ def run_visualization(
             agents_scatter.set_color(colors)
         else:
             agents_scatter.set_offsets(np.empty((0, 2)))
+
+        # Update Storm Line
+        if storm_line is not None and hasattr(world, "storm_x"):
+            storm_line.set_xdata([world.storm_x, world.storm_x])
 
         avg_health = np.mean([a.health for a in world.agents]) if world.agents else 0
         stats_text.set_text(f"{step_label}\nPop: {len(world.agents)}\nHealth: {avg_health:.1f}")

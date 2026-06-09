@@ -9,7 +9,8 @@ from .schema import InputSchema
 from .config import (
     MAX_RESOURCE, COST_OF_LIFE, REPRODUCTION_THRESHOLD, REPRODUCTION_COST,
     REPRODUCTION_MATURITY_AGE, REPRODUCTION_COOLDOWN, REPRODUCTION_PROB,
-    REGROW_DENSITY, REGROW_AMOUNT, GIVE_AMOUNT, TAKE_AMOUNT, INIT_RES_DENSITY
+    REGROW_DENSITY, REGROW_AMOUNT, GIVE_AMOUNT, TAKE_AMOUNT, INIT_RES_DENSITY,
+    TAKE_COST_FRAC
 )
 
 
@@ -257,7 +258,7 @@ class World:
                 receiver.health += GIVE_AMOUNT
 
         elif action == Action.TAKE:
-            # steal 10 health from a neighbor
+            # steal 10 health from a neighbor, but this has a cost to the attacker as well
             neighbors = []
             for dy in range(-1, 2):
                 for dx in range(-1, 2):
@@ -272,7 +273,7 @@ class World:
                 victim = random.choice(neighbors)
                 amount = min(TAKE_AMOUNT, victim.health)
                 victim.health -= amount
-                agent.health += amount
+                agent.health += amount*(1 - TAKE_COST_FRAC)  # attacker gets less due to cost
 
     def can_reproduce(self, agent: Agent) -> bool:
         if agent.health <= self.reproduction_threshold:

@@ -72,8 +72,6 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
     milestones_hit = 0 # To prevent saving a milestone every single generation after they master it
 
     while world.generation <= TOTAL_GENERATIONS:
-        
-        # --- NEW CHECKPOINTING LOGIC ---
         # We save at tick 0, so the loaded agents start fresh at the beginning of the epoch
         if world.tick == 0:
             is_interval = (world.generation % CHECKPOINT_INTERVAL == 0) or (world.generation == 1)
@@ -89,11 +87,15 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
                 save_milestone_offspring = False
         # -------------------------------
 
-        # --- CSV STATS LOGIC ---
-        if world.tick == world.max_ticks - 1 or len(world.agents) == 0:
+        world.update_world()
+        
+        for action in Action:
+            gen_action_counts[action] += world.last_step_stats.get(action, 0)
+            
+        if world.tick >= world.max_ticks or not world.agents:
+            # Evaluate stats just before wiping the agents out
             pool = world.agents + getattr(world, 'graveyard', [])
             pop_size = len(pool)
-
             action_list = [gen_action_counts[a] for a in Action]
             
             if pop_size > 0:
@@ -165,15 +167,15 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
                     row = [world.generation, 0, "0.000", "0.000", 0, "0.0", "0.000", "0.000"] + action_list
             
             data_buffer.append(row)
-            gen_action_counts = {action: 0 for action in Action}
             
+            # Reset action counts
+            for action in Action:
+                gen_action_counts[action] = 0
+                
             if pbar: pbar.update(1)
-
-        # Advance the simulation
-        world.update_world()
-        
-        for action in Action:
-            gen_action_counts[action] += world.last_step_stats.get(action, 0)
+            
+            # Trigger the evolution now that stats are saved
+            world.evaluate_n_evolve()
 
     if pbar: pbar.close()
 
