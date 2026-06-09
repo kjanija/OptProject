@@ -42,8 +42,8 @@ def main():
     )
     args = parser.parse_args()
     if args.mode == "generational":
-        _, world_creation_fun = SCENARIOS[args.scenario]
-        run_headless_generational(world_creation_fun=world_creation_fun)
+        scenario_name, world_creation_fun = SCENARIOS[args.scenario]
+        run_headless_generational(world_creation_fun=world_creation_fun, scenario_name=scenario_name)
     else:
         run_headless()
 

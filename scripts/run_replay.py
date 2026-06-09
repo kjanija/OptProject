@@ -36,7 +36,7 @@ def get_latest_checkpoint():
     if not os.path.exists(CHECKPOINT_DIR):
         return None
     
-    files = glob.glob(os.path.join(CHECKPOINT_DIR, "*.pkl"))
+    files = glob.glob(os.path.join(CHECKPOINT_DIR, "**", "*.pkl"), recursive=True)
     if not files:
         return None
     

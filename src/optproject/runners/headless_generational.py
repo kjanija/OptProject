@@ -4,6 +4,7 @@ import os
 import pickle
 import numpy as np
 from tqdm import tqdm
+from datetime import datetime
 
 from ..core.actions import Action
 from ..core.agent import Agent
@@ -35,11 +36,14 @@ SCENARIOS = {
 }
 
 
-def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, output_file="experiment_data.csv"):
+def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, output_file="experiment_data.csv", scenario_name="random"):
     print(f"Starting headless simulation. Target: {TOTAL_GENERATIONS} generations")
 
-    # 1. Ensure our checkpoint folder exists
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    run_id = datetime.now().strftime("%m%d_%H%M")
+    run_checkpoint_dir = os.path.join(CHECKPOINT_DIR, scenario_name, run_id)
+    os.makedirs(run_checkpoint_dir, exist_ok=True)
+
+    output_file_path = os.path.join(run_checkpoint_dir, os.path.basename(output_file))
 
     sim_start_time = time.time()
     world = world_creation_fun()
@@ -68,7 +72,7 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
             
             if is_interval or save_milestone_offspring:
                 label = "MILESTONE" if save_milestone_offspring and not is_interval else "INTERVAL"
-                filepath = os.path.join(CHECKPOINT_DIR, f"gen_{world.generation:04d}_{label}.pkl")
+                filepath = os.path.join(run_checkpoint_dir, f"gen_{world.generation:04d}_{label}.pkl")
                 
                 with open(filepath, "wb") as f:
                     # Pickle the agents list. (This saves their brains, weights, and initial state)
@@ -119,8 +123,8 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
 
     sim_end_time = time.time()
 
-    print(f"\nWriting {len(data_buffer)} observations to {output_file}")
-    with open(output_file, "w", newline="") as f:
+    print(f"\nWriting {len(data_buffer)} observations to {output_file_path}")
+    with open(output_file_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(data_buffer)
@@ -129,7 +133,7 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
     print(f"-- Simulation complete --")
     print(f"Simulation time: {sim_end_time - sim_start_time:.2f}s")
     print(f"Data write time: {write_end_time - sim_end_time:.2f}s")
-    print(f"Data saved to {output_file}")
+    print(f"Data saved to {output_file_path}")
 
 def main():
     import argparse
@@ -144,8 +148,8 @@ def main():
     )
     args = parser.parse_args()
 
-    _, world_creation_fun = SCENARIOS[args.scenario]
-    run_headless(world_creation_fun=world_creation_fun)
+    scenario_name, world_creation_fun = SCENARIOS[args.scenario]
+    run_headless(world_creation_fun=world_creation_fun, scenario_name=scenario_name)
 
 
 if __name__ == "__main__":
