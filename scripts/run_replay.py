@@ -11,6 +11,12 @@ if _SRC.exists() and str(_SRC) not in sys.path:
 
 from optproject.environments.generational_world import GenerationalWorld
 from optproject.runners.visualization_runner import run_visualization
+from optproject.scenarios.generational_scenarios import (
+    create_random_escape_world,
+    create_smart_escape_world,
+    create_two_island_world,
+    create_competitive_world,
+)
 
 # Ensure these match the constants used during training
 WIDTH = 50
@@ -18,6 +24,12 @@ HEIGTH = 50
 INIT_RES_DENSITY = 0.2
 CHECKPOINT_DIR = "checkpoints"
 
+SCENARIOS = {
+    "1": create_random_escape_world,
+    "2": create_smart_escape_world,
+    "3": create_two_island_world,
+    "4": create_competitive_world,
+}
 
 def get_latest_checkpoint():
     """Finds the most recently modified pickle file."""
@@ -32,7 +44,7 @@ def get_latest_checkpoint():
     return files[0]
 
 
-def load_checkpoint_world(checkpoint_path):
+def load_checkpoint_world(checkpoint_path, world_creation_fn=None):
     """
     This acts as our custom 'world_creation_fun'. 
     It loads the agents, builds the world, and returns it.
@@ -45,7 +57,10 @@ def load_checkpoint_world(checkpoint_path):
     print(f"Loaded {len(saved_agents)} trained agents. Initializing world...")
 
     # 1. Create a fresh Generational World
-    world = GenerationalWorld(width=WIDTH, height=HEIGTH, init_res_density=INIT_RES_DENSITY)
+    if world_creation_fn:
+        world = world_creation_fn()
+    else:
+        world = GenerationalWorld(width=WIDTH, height=HEIGTH, init_res_density=INIT_RES_DENSITY)
     
     # 2. Clear out whatever random agents it spawned by default
     world.agents = []
@@ -53,7 +68,10 @@ def load_checkpoint_world(checkpoint_path):
 
     # 3. Inject our trained elites
     for agent in saved_agents:
-        agent.health = 100.0
+        if getattr(agent, 'faction', '') == 'hunter':
+            agent.health = 40.0
+        else:
+            agent.health = 100.0
         agent.age = 0
         world.add_agent(agent)
 
@@ -76,7 +94,10 @@ def load_checkpoint_world(checkpoint_path):
 
         # 4. Inject them back for the next loop
         for agent in fresh_agents:
-            agent.health = 100.0
+            if getattr(agent, 'faction', '') == 'hunter':
+                agent.health = 40.0
+            else:
+                agent.health = 100.0
             agent.age = 0
             world.add_agent(agent)
 
@@ -87,11 +108,22 @@ def load_checkpoint_world(checkpoint_path):
 
 
 def main():
-    # Allow the user to specify a file, or default to the newest one
-    if len(sys.argv) > 1:
-        target_file = sys.argv[1]
-    else:
-        target_file = get_latest_checkpoint()
+    import argparse
+    parser = argparse.ArgumentParser(description="Replay a trained checkpoint")
+    parser.add_argument(
+        "--file", 
+        type=str, 
+        help="Path to the checkpoint pickle file. Defaults to latest."
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=["1", "2", "3", "4"],
+        help="World type: 1=Random, 2=Smart, 3=Two Island, 4=Competitive",
+    )
+    args = parser.parse_args()
+
+    target_file = args.file if args.file else get_latest_checkpoint()
+    world_fn = SCENARIOS.get(args.scenario) if args.scenario else None
 
     if not target_file or not os.path.exists(target_file):
         print(f"Could not find any checkpoints in '{CHECKPOINT_DIR}/'.")
@@ -101,7 +133,7 @@ def main():
     # Boot up your existing visualizer using our custom creation function!
     # We wrap it in a lambda because load_checkpoint_world requires an argument.
     run_visualization(
-        world_creation_fun=lambda: load_checkpoint_world(target_file),
+        world_creation_fun=lambda: load_checkpoint_world(target_file, world_fn),
         show_scent_heatmap=True,
         show_scent_vectors=False    
     )

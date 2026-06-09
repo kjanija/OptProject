@@ -11,7 +11,7 @@ from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
 
-from ..scenarios.generational_scenarios import create_random_escape_world, create_smart_escape_world, create_two_island_world
+from ..scenarios.generational_scenarios import create_competitive_world, create_random_escape_world, create_smart_escape_world, create_two_island_world
 
 WIDTH = 50
 HEIGTH = 50
@@ -25,6 +25,14 @@ OUTPUT_FILE = "experiment_data.csv"
 CHECKPOINT_DIR = "checkpoints"
 CHECKPOINT_INTERVAL = 100  # Save every 100 generations
 MILESTONE_THRESHOLD = 0.95 # Save if an agent reaches 95% of the distance
+
+
+SCENARIOS = {
+    1: ("random", create_random_escape_world),
+    2: ("smart", create_smart_escape_world),
+    3: ("two-island", create_two_island_world),
+    4: ("competitive", create_competitive_world),
+}
 
 
 def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, output_file="experiment_data.csv"):
@@ -124,7 +132,20 @@ def run_headless(world_creation_fun=create_random_escape_world, use_tqdm=True, o
     print(f"Data saved to {output_file}")
 
 def main():
-    run_headless()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run generational headless simulation")
+    parser.add_argument(
+        "--scenario",
+        type=int,
+        choices=tuple(SCENARIOS.keys()),
+        default=1,
+        help="Scenario to use for the generational runner: 1=random, 2=smart, 3=two-island, 4=competitive",
+    )
+    args = parser.parse_args()
+
+    _, world_creation_fun = SCENARIOS[args.scenario]
+    run_headless(world_creation_fun=world_creation_fun)
 
 
 if __name__ == "__main__":
