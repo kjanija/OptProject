@@ -25,18 +25,23 @@ INIT_RES_DENSITY = 0.2
 CHECKPOINT_DIR = "checkpoints"
 
 SCENARIOS = {
-    "1": create_random_escape_world,
-    "2": create_smart_escape_world,
-    "3": create_two_island_world,
-    "4": create_competitive_world,
+    "1": ("random", create_random_escape_world),
+    "2": ("smart", create_smart_escape_world),
+    "3": ("two-island", create_two_island_world),
+    "4": ("competitive", create_competitive_world),
 }
 
-def get_latest_checkpoint():
-    """Finds the most recently modified pickle file."""
-    if not os.path.exists(CHECKPOINT_DIR):
+def get_latest_checkpoint(scenario_name=None):
+    """Finds the most recently modified pickle file, optionally within a scenario."""
+    search_dir = CHECKPOINT_DIR
+    if scenario_name:
+        search_dir = os.path.join(CHECKPOINT_DIR, scenario_name)
+
+    if not os.path.exists(search_dir):
         return None
     
-    files = glob.glob(os.path.join(CHECKPOINT_DIR, "**", "*.pkl"), recursive=True)
+    search_path = os.path.join(search_dir, "**", "*.pkl")
+    files = glob.glob(search_path, recursive=True)
     if not files:
         return None
     
@@ -122,11 +127,16 @@ def main():
     )
     args = parser.parse_args()
 
-    target_file = args.file if args.file else get_latest_checkpoint()
-    world_fn = SCENARIOS.get(args.scenario) if args.scenario else None
+    scenario_name = None
+    world_fn = None
+    if args.scenario:
+        scenario_name, world_fn = SCENARIOS[args.scenario]
+
+    target_file = args.file if args.file else get_latest_checkpoint(scenario_name)
 
     if not target_file or not os.path.exists(target_file):
-        print(f"Could not find any checkpoints in '{CHECKPOINT_DIR}/'.")
+        search_dir = os.path.join(CHECKPOINT_DIR, scenario_name) if scenario_name else CHECKPOINT_DIR
+        print(f"Could not find any checkpoints in '{search_dir}/'.")
         print("Make sure you run headless_runner.py first!")
         sys.exit(1)
 

@@ -19,12 +19,26 @@ def plot_experiment_data(csv_file="experiment_data.csv"):
     fig.suptitle("Co-Evolutionary Training Dashboard", fontsize=18, fontweight="bold", y=0.98)
 
     # ---------------------------------------------------------
-    # Panel 1: Distance (Objective 1)
+    # Panel 1: Scenario-specific Objective
     # ---------------------------------------------------------
-    ax_dist.plot(df["Generation"], df["Max_Dist"], label="Max Distance (Elites)", color="#d62728", linewidth=2)
-    ax_dist.plot(df["Generation"], df["Avg_Dist"], label="Avg Distance (Population)", color="#ff9896", linewidth=2)
-    ax_dist.set_title("Distance to Island", fontsize=14)
-    ax_dist.set_ylabel("Normalized Distance")
+    if "Max_Dist" in df.columns:
+        ax_dist.plot(df["Generation"], df["Max_Dist"], label="Max Distance (Elites)", color="#d62728", linewidth=2)
+        ax_dist.plot(df["Generation"], df["Avg_Dist"], label="Avg Distance (Population)", color="#ff9896", linewidth=2)
+        ax_dist.set_title("Distance to Island", fontsize=14)
+        ax_dist.set_ylabel("Normalized Distance")
+    elif "Max_Prox_1" in df.columns:
+        ax_dist.plot(df["Generation"], df["Max_Prox_1"], label="Max Prox 1", color="#d62728", linewidth=2)
+        ax_dist.plot(df["Generation"], df["Max_Prox_2"], label="Max Prox 2", color="#1f77b4", linewidth=2)
+        ax_dist.plot(df["Generation"], df["Avg_Prox_1"], label="Avg Prox 1", color="#ff9896", linewidth=2, linestyle="--")
+        ax_dist.plot(df["Generation"], df["Avg_Prox_2"], label="Avg Prox 2", color="#aec7e8", linewidth=2, linestyle="--")
+        ax_dist.set_title("Proximity to Islands", fontsize=14)
+        ax_dist.set_ylabel("Normalized Proximity")
+    elif "Max_Dist_Migrator" in df.columns:
+        ax_dist.plot(df["Generation"], df["Max_Dist_Migrator"], label="Max Dist (Migrator)", color="#d62728", linewidth=2)
+        ax_dist.plot(df["Generation"], df["Avg_Dist_Migrator"], label="Avg Dist (Migrator)", color="#ff9896", linewidth=2)
+        ax_dist.set_title("Distance to Island (Migrators)", fontsize=14)
+        ax_dist.set_ylabel("Normalized Distance")
+        
     ax_dist.set_ylim(0, 1.05)
     ax_dist.grid(True, linestyle="--", alpha=0.6)
     ax_dist.legend(loc="upper left")
@@ -32,11 +46,20 @@ def plot_experiment_data(csv_file="experiment_data.csv"):
     # ---------------------------------------------------------
     # Panel 2: Survivability (Objectives 2 & 3)
     # ---------------------------------------------------------
-    color_health = "#2ca02c"
-    ax_surv.plot(df["Generation"], df["Avg_Health"], label="Avg Health", color=color_health, linewidth=2)
-    ax_surv.set_ylabel("Avg Health", color=color_health, fontweight="bold")
-    ax_surv.tick_params(axis='y', labelcolor=color_health)
-    ax_surv.set_ylim(0, 1.05)
+    if "Avg_Health_Migrator" in df.columns:
+        color_health_m = "#2ca02c"
+        color_health_h = "#d62728"
+        ax_surv.plot(df["Generation"], df["Avg_Health_Migrator"], label="Avg Health (Migrator)", color=color_health_m, linewidth=2)
+        ax_surv.plot(df["Generation"], df["Avg_Health_Hunter"], label="Avg Health (Hunter)", color=color_health_h, linewidth=2)
+        ax_surv.set_ylabel("Avg Health", color="#000000", fontweight="bold")
+        ax_surv.tick_params(axis='y', labelcolor="#000000")
+        ax_surv.set_ylim(0, 1.05)
+    else:
+        color_health = "#2ca02c"
+        ax_surv.plot(df["Generation"], df["Avg_Health"], label="Avg Health", color=color_health, linewidth=2)
+        ax_surv.set_ylabel("Avg Health", color=color_health, fontweight="bold")
+        ax_surv.tick_params(axis='y', labelcolor=color_health)
+        ax_surv.set_ylim(0, 1.05)
 
     ax_age = ax_surv.twinx()
     color_age = "#1f77b4"
