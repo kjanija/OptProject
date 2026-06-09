@@ -123,37 +123,28 @@ class World:
 
         return inputs
 
+    def get_valid_actions_mask(self, agent: Agent, inputs: np.ndarray) -> np.ndarray:
+        """Returns a boolean array where False indicates an invalid action."""
+        has_energy_nearby = np.max(inputs[InputSchema.ID_ENERGY : InputSchema.ID_ENERGY + 9]) > 0
+        has_scent_nearby = self.enable_scent_action and np.max(inputs[InputSchema.ID_SCENT : InputSchema.ID_SCENT + 9]) > 0
+        has_agent_nearby = np.max(inputs[InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9]) > 0
+
+        return np.array([
+            self.resource_grid[agent.x, agent.y] > 0,         # GATHER (0)
+            has_agent_nearby and agent.health > GIVE_AMOUNT,  # GIVE (1)
+            has_agent_nearby,                                 # TAKE (2)
+            True,                                             # WAIT (3)
+            has_energy_nearby,                                # MOVE_TO_RESOURCE (4)
+            has_agent_nearby,                                 # MOVE_AWAY_FROM_AGENT (5)
+            has_agent_nearby,                                 # MOVE_TOWARDS_AGENT (6)
+            True,                                             # MOVE_RANDOM (7)
+            has_scent_nearby,                                 # MOVE_TO_SCENT (8)
+        ], dtype=bool)
+
     def execute_action(self, agent: Agent, inputs: np.ndarray, action_idx: int = -1):
         """Execute action decided by agent"""
 
         action = Action(action_idx)
-
-        if action == Action.MOVE_TO_SCENT and not self.enable_scent_action:
-            action = Action.WAIT
-
-        # --- VALIDITY CHECKS ---
-        # If an agent attempts an action that is contextually impossible,
-        # we fall back to WAIT so our statistics reflect actual successful behavior.
-        is_valid = True
-        
-        if action == Action.GATHER:
-            if self.resource_grid[agent.x, agent.y] <= 0:
-                is_valid = False
-        elif action == Action.MOVE_TO_RESOURCE:
-            if np.max(inputs[InputSchema.ID_ENERGY : InputSchema.ID_ENERGY + 9]) <= 0:
-                is_valid = False
-        elif action == Action.MOVE_TO_SCENT:
-            if np.max(inputs[InputSchema.ID_SCENT : InputSchema.ID_SCENT + 9]) <= 0:
-                is_valid = False
-        elif action in (Action.MOVE_TOWARDS_AGENT, Action.MOVE_AWAY_FROM_AGENT, Action.TAKE):
-            if np.max(inputs[InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9]) <= 0:
-                is_valid = False
-        elif action == Action.GIVE:
-            if np.max(inputs[InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9]) <= 0 or agent.health <= 10:
-                is_valid = False
-
-        if not is_valid:
-            action = Action.WAIT
 
         # log action
         self.last_step_stats[action] += 1
@@ -341,7 +332,8 @@ class World:
 
             # act
             inputs = self.get_agent_inputs(agent)  # get info from env
-            action_id = agent.brain.predict(inputs)  # think
+            valid_mask = self.get_valid_actions_mask(agent, inputs)
+            action_id = agent.brain.predict(inputs, valid_actions_mask=valid_mask)  # think
             self.execute_action(agent, inputs, int(action_id))  # act
 
             # cost of living

@@ -12,10 +12,11 @@ class BrainModel(ABC):
     """
 
     @abstractmethod
-    def predict(self, inputs) -> int:
+    def predict(self, inputs, valid_actions_mask=None) -> int:
         """
         Args:
             inputs (np.ndarray): inputs from the environment
+            valid_actions_mask (np.ndarray, optional): boolean array of valid actions
 
         Returns:
             int: choosen action
@@ -53,12 +54,13 @@ class Brain(BrainModel):
         self.W2 = np.random.uniform(-1, 1, (self.hidden_size, self.output_size))
         self.b2 = np.random.uniform(-1, 1, (self.output_size,))
 
-    def predict(self, inputs):
+    def predict(self, inputs, valid_actions_mask=None):
         """
         Performs a forward pass of the net and decides action
 
         Args:
             inputs (np.ndarray): inputs from the environment
+            valid_actions_mask (np.ndarray, optional): boolean array of valid actions
 
         Returns:
             int: choosen action
@@ -79,6 +81,10 @@ class Brain(BrainModel):
         x = np.dot(x_in, self.W1) + self.b1
         x = np.maximum(0, x)  # ReLU
         x = np.dot(x, self.W2) + self.b2
+
+        # Mask out invalid actions by setting their values to negative infinity
+        if valid_actions_mask is not None:
+            x[~valid_actions_mask] = -np.inf
 
         # TODO: argmax basta o devo fare softmax e poi scegliere il massimo?
         return int(np.argmax(x))
