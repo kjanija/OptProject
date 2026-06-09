@@ -64,8 +64,7 @@ class CompetitiveWorld(GenerationalWorld):
                 h.norm_h = max(0.0, h.health) / max_h_h # type: ignore
                 h.norm_age = h.age / max_ticks # type: ignore
             
-            # NSGA-II Platypus Evaluation
-            num_hunter_elites = max(1, len(hunters) // 5) # Top 20%
+            num_hunter_elites = max(1, len(hunters) // 5)
             top_hunters = get_hunter_elites(hunters, num_hunter_elites)
             
             # Breed 10 Hunters

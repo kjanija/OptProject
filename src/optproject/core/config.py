@@ -10,16 +10,16 @@ REGROW_DENSITY = 0.05
 REGROW_AMOUNT = 5.0
 
 # --- Epoch & Generational Settings ---
-MAX_TICKS = 200
-STORM_SPEED = 10  # Ticks per 1 unit of storm movement
+MAX_TICKS = 300
+STORM_SPEED = 7  # Ticks per 1 unit of storm movement
 ISLAND_WIDTH = 5  # Width of the resource island on the right
 SPAWN_AREA_WIDTH = 4 # Width of the agent spawn area on the left
 
 # --- Agent Core Settings ---
-INIT_AGENTS = 50
+INIT_AGENTS = 100
 INIT_HEALTH = 100.0
 HIDDEN_DIM = 10
-COST_OF_LIFE = 0.2
+COST_OF_LIFE = 0.4
 GIVE_AMOUNT = 10.0
 TAKE_AMOUNT = 10.0
 
@@ -31,7 +31,7 @@ REPRODUCTION_COOLDOWN = 0
 REPRODUCTION_PROB = 1.0
 ELITES_FRACTION = 0.2 
 MUTATION_PROB = 0.1
-MUTATION_AMP = 0.2
+MUTATION_AMP = 0.3
 
 # --- Competitive Scenario Settings ---
 MIGRATORS_FRACTION = 0.8

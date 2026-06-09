@@ -11,7 +11,7 @@ from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
 from ..core.config import (
-    WIDTH, HEIGTH, INITIAL_AGENTS, INIT_HEALTH, 
+    WIDTH, HEIGTH, INIT_AGENTS, INIT_HEALTH, 
     INIT_RES_DENSITY, HIDDEN_DIM, STEPS_PER_FRAME
 )
 
@@ -23,7 +23,7 @@ def create_world():
     world = World(WIDTH, HEIGTH, init_res_density=INIT_RES_DENSITY)
 
     popsize = 0
-    while popsize < INITIAL_AGENTS:
+    while popsize < INIT_AGENTS:
         brain = Brain(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM)
         x, y = np.random.randint(0, world.width), np.random.randint(0, world.heigth)
         agent = Agent(brain, x, y, INIT_HEALTH, color=None)
@@ -64,7 +64,12 @@ def run_visualization(
 
     # 1. Resource Grid (Image)
     resource_img = ax_grid.imshow(
-        world.resource_grid.T, cmap="Greens", vmin=0, vmax=5, origin="lower"
+        np.ma.masked_less_equal(world.resource_grid.T, 0.0), 
+        cmap="Greens", 
+        vmin=0, 
+        vmax=5, 
+        origin="lower", 
+        zorder=3
     )
 
     # Optional: Scent Heatmap Overlay
@@ -83,7 +88,7 @@ def run_visualization(
     quiver = None
     if show_scent_vectors and hasattr(world, "scent_grid"):
         # Create coordinate grids
-        x_grid, y_grid = np.meshgrid(np.arange(WIDTH), np.arange(HEIGTH))
+        x_grid, y_grid = np.meshgrid(np.arange(world.width), np.arange(world.heigth))
 
         # Calculate mathematical gradient (derivative) of the scent
         scent_field = (
@@ -105,11 +110,11 @@ def run_visualization(
             angles="xy",
             scale_units="xy",
             scale=1,
-            zorder=3,
+            zorder=4,
         )
 
     # 2. Agents (Scatter Plot)
-    agents_scatter = ax_grid.scatter([], [], c=[], s=50, edgecolors="black")
+    agents_scatter = ax_grid.scatter([], [], c=[], s=50, edgecolors="black", zorder=5)
 
     # 3. Stats Text
     stats_text = ax_grid.text(
@@ -229,7 +234,7 @@ def run_visualization(
             return resource_img, agents_scatter, stats_text, *lines.values()
 
         # Update Grid Visualization
-        resource_img.set_data(world.resource_grid.T)
+        resource_img.set_data(np.ma.masked_less_equal(world.resource_grid.T, 0.0))
 
         # Update Scent Visualization
         if hasattr(world, "scent_grid"):

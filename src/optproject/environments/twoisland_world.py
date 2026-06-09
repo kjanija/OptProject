@@ -120,16 +120,7 @@ class TwoIslandWorld(GenerationalWorld):
             num_elites = int(ELITES_FRACTION * len(evaluation_pool))
             top_agents = get_twoisland_elites(evaluation_pool, num_elites)
 
-            # Log the stats of the absolute best representative from Rank 1
-            best_agent = top_agents[0]
-            print(
-                f"Gen {self.generation:3d} | Pool {len(evaluation_pool)} | Survivors {len(self.agents)} | "
-                f"Best Front Rep -> Prox 1: {best_agent.norm_prox_1:.2f} | " # type: ignore
-                f"Prox 2: {best_agent.norm_prox_2:.2f} | " # type: ignore
-                f"Health: {best_agent.norm_h:.2f}" # type: ignore
-            )
-
-            # 3. REPRODUCTION
+            # REPRODUCTION
             self.agents = []
             self.agent_grid.fill(None)
             

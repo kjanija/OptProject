@@ -140,15 +140,7 @@ class GenerationalWorld(World):
             # ELITISM (NSGA-II)
             top_agents = get_nsga2_elites(evaluation_pool, int(ELITES_FRACTION * len(evaluation_pool)))
 
-            best_agent = top_agents[0]
-            print(
-                f"Gen {self.generation:3d} | Pool {len(evaluation_pool)} | Survivors {len(self.agents)} | "
-                f"Best Front Rep -> Dist: {best_agent.norm_x:.2f} | " # type: ignore
-                f"Health: {best_agent.norm_h:.2f} | " # type: ignore
-                f"Age: {best_agent.norm_age:.2f}" # type: ignore
-            )
-
-            # reproduce
+            # REPRODUCE
             self.agents = []
             self.agent_grid.fill(None)
             popsize = 0
