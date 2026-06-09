@@ -93,8 +93,19 @@ def inject_migrator_genes(brain: Brain):
     for i in range(9):
         if i != 4:
             brain.W1[InputSchema.ID_SCENT + i, 0] = 1.0
+            
+    # Hidden 1: standing on food
+    brain.W1[InputSchema.ID_ENERGY + 4, 1] = 10.0
+    
+    # Hidden 2: food nearby
+    for i in range(9):
+        if i != 4:
+            brain.W1[InputSchema.ID_ENERGY + i, 2] = 1.0
+            
     brain.W2[0, Action.MOVE_TO_SCENT] = 100.0
-    brain.W2[1, Action.MOVE_RANDOM] = 5.0 # baseline
+    brain.W2[1, Action.GATHER] = 150.0  # Highest priority: Eat!
+    brain.W2[2, Action.MOVE_TO_RESOURCE] = 120.0  # Second priority: seek food actively
+    brain.W2[3, Action.MOVE_RANDOM] = 5.0 # baseline
 
 def inject_hunter_genes(brain: Brain):
     """Incentivizes taking from agents. xAI will color them heavily RED"""
