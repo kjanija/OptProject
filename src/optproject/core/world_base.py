@@ -170,27 +170,34 @@ class World:
             neighbourhood_energy = inputs[
                 InputSchema.ID_ENERGY : InputSchema.ID_ENERGY + 9
             ]
-            best_idx = np.argmax(neighbourhood_energy)
+            max_energy = np.max(neighbourhood_energy)
 
-            if (
-                neighbourhood_energy[best_idx] > 0 and best_idx != 4
-            ):  # because idx 4 is self
-                # go back to a 2d type indicization
-                dy = int(best_idx // 3 - 1)
-                dx = int(best_idx % 3 - 1)
+            if max_energy > 0:
+                best_indices = np.where(neighbourhood_energy == max_energy)[0]
+                best_indices = best_indices[best_indices != 4] # because idx 4 is self
+                if len(best_indices) > 0:
+                    best_idx = np.random.choice(best_indices)
+                    # go back to a 2d type indicization
+                    dy = int(best_idx // 3 - 1)
+                    dx = int(best_idx % 3 - 1)
 
-                tx, ty = get_neighbor_coords(dx, dy)
-                move_to(tx, ty)
+                    tx, ty = get_neighbor_coords(dx, dy)
+                    move_to(tx, ty)
 
         elif action == Action.MOVE_TO_SCENT:
             neighborhood_scent = inputs[InputSchema.ID_SCENT : InputSchema.ID_SCENT + 9]
-            best_idx = np.argmax(neighborhood_scent)
-            if neighborhood_scent[best_idx] > 0 and best_idx != 4:
-                dy = int(best_idx // 3 - 1)
-                dx = int(best_idx % 3 - 1)
+            max_scent = np.max(neighborhood_scent)
+            
+            if max_scent > 0:
+                best_indices = np.where(neighborhood_scent == max_scent)[0]
+                best_indices = best_indices[best_indices != 4]
+                if len(best_indices) > 0:
+                    best_idx = np.random.choice(best_indices)
+                    dy = int(best_idx // 3 - 1)
+                    dx = int(best_idx % 3 - 1)
 
-                tx, ty = get_neighbor_coords(dx, dy)
-                move_to(tx, ty)
+                    tx, ty = get_neighbor_coords(dx, dy)
+                    move_to(tx, ty)
 
         elif action == Action.MOVE_AWAY_FROM_AGENT:
             # will use agents health as an indicator of presence
@@ -232,13 +239,17 @@ class World:
             neighbourhood_health = inputs[
                 InputSchema.ID_OTHER_HEALTH : InputSchema.ID_OTHER_HEALTH + 9
             ]
-            best_idx = np.argmax(neighbourhood_health)
+            max_health = np.max(neighbourhood_health)
 
-            if best_idx != 4 and neighbourhood_health[best_idx] > 0:
-                dy = int(best_idx // 3 - 1)
-                dx = int(best_idx % 3 - 1)
-                tx, ty = get_neighbor_coords(dx, dy)
-                move_to(tx, ty)
+            if max_health > 0:
+                best_indices = np.where(neighbourhood_health == max_health)[0]
+                best_indices = best_indices[best_indices != 4]
+                if len(best_indices) > 0:
+                    best_idx = np.random.choice(best_indices)
+                    dy = int(best_idx // 3 - 1)
+                    dx = int(best_idx % 3 - 1)
+                    tx, ty = get_neighbor_coords(dx, dy)
+                    move_to(tx, ty)
 
         elif action == Action.GIVE:
             # give 10 health to a random neighbor
