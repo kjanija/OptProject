@@ -6,6 +6,11 @@ from .actions import Action
 from .agent import Agent
 from .brain import Brain
 from .schema import InputSchema
+from .config import (
+    MAX_RESOURCE, COST_OF_LIFE, REPRODUCTION_THRESHOLD, REPRODUCTION_COST,
+    REPRODUCTION_MATURITY_AGE, REPRODUCTION_COOLDOWN, REPRODUCTION_PROB,
+    REGROW_DENSITY, REGROW_AMOUNT, GIVE_AMOUNT, TAKE_AMOUNT, INIT_RES_DENSITY
+)
 
 
 class World:
@@ -17,16 +22,16 @@ class World:
         self,
         width: int,
         height: int,
-        init_res_density: float = 0.1,
-        max_resource: float = 10.0,
-        cost_of_life: float = 0.5,  # health to be removed at each round
-        reproduction_threshold: float = 75.0,
-        reproduction_cost=50.0,
-        reproduction_maturity_age: int = 0,
-        reproduction_cooldown_time: int = 0,
-        reproduction_prob: float = 1.0,
-        regrow_density: float = 0.05,
-        regrow_amount: float = 5.0,
+        init_res_density: float = INIT_RES_DENSITY,
+        max_resource: float = MAX_RESOURCE,
+        cost_of_life: float = COST_OF_LIFE,
+        reproduction_threshold: float = REPRODUCTION_THRESHOLD,
+        reproduction_cost=REPRODUCTION_COST,
+        reproduction_maturity_age: int = REPRODUCTION_MATURITY_AGE,
+        reproduction_cooldown_time: int = REPRODUCTION_COOLDOWN,
+        reproduction_prob: float = REPRODUCTION_PROB,
+        regrow_density: float = REGROW_DENSITY,
+        regrow_amount: float = REGROW_AMOUNT,
         enable_scent_action: bool = False,
     ):
         self.width = width
@@ -248,8 +253,8 @@ class World:
 
             if neighbors and agent.health > 10:
                 receiver = random.choice(neighbors)
-                agent.health -= 10.0
-                receiver.health += 10.0
+                agent.health -= GIVE_AMOUNT
+                receiver.health += GIVE_AMOUNT
 
         elif action == Action.TAKE:
             # steal 10 health from a neighbor
@@ -265,7 +270,7 @@ class World:
 
             if neighbors:
                 victim = random.choice(neighbors)
-                amount = min(10.0, victim.health)
+                amount = min(TAKE_AMOUNT, victim.health)
                 victim.health -= amount
                 agent.health += amount
 

@@ -9,16 +9,10 @@ from ..core.agent import Agent
 from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
-
-WIDTH = 50
-HEIGTH = 50
-INIT_AGENTS = 50
-INIT_HEALTH = 100.0
-INIT_RES_DENSITY = 0.2
-HIDDEN_DIM = 10
-
-TOTAL_GENERATIONS = 2000
-OUTPUT_FILE = "experiment_data.csv"
+from ..core.config import (
+    WIDTH, HEIGTH, INIT_AGENTS, INIT_HEALTH, 
+    INIT_RES_DENSITY, HIDDEN_DIM, TOTAL_GENERATIONS, OUTPUT_FILE
+)
 
 
 def create_world():

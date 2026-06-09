@@ -6,6 +6,10 @@ from ..core.actions import Action
 from ..core.agent import Agent
 from ..core.brain import Brain
 from ..core.schema import InputSchema
+from ..core.config import (
+    MUTATION_PROB, MUTATION_AMP, ELITES_FRACTION, SCENT_SOURCE_STRENGTH,
+    SCENT_INIT_DIFFUSION_STEPS, SCENT_DECAY, SCENT_DIFFUSION_RATE
+)
 
 
 class TwoIslandWorld(GenerationalWorld):
@@ -27,14 +31,14 @@ class TwoIslandWorld(GenerationalWorld):
         self.island_2_y = 5 * self.heigth // 6
 
         # Island 1 (Top Right)
-        self.resource_grid[self.island_start_x :, 0 : self.heigth // 3] = self.max_resource
-        self.scent_grid[self.island_start_x :, 0 : self.heigth // 3] = self.scent_source_strength
+        self.resource_grid[self.island_start_x :, 0 : self.heigth // 3] = self.max_resource # type: ignore
+        self.scent_grid[self.island_start_x :, 0 : self.heigth // 3] = SCENT_SOURCE_STRENGTH
         
         # Island 2 (Bottom Right)
-        self.resource_grid[self.island_start_x :, 2 * self.heigth // 3 :] = self.max_resource
-        self.scent_grid[self.island_start_x :, 2 * self.heigth // 3 :] = self.scent_source_strength
+        self.resource_grid[self.island_start_x :, 2 * self.heigth // 3 :] = self.max_resource # type: ignore
+        self.scent_grid[self.island_start_x :, 2 * self.heigth // 3 :] = SCENT_SOURCE_STRENGTH
         
-        for _ in range(self.scent_init_diffusion_steps):
+        for _ in range(SCENT_INIT_DIFFUSION_STEPS):
             self.diffuse_scent()
 
     def get_coords(self, x, y):
@@ -64,14 +68,11 @@ class TwoIslandWorld(GenerationalWorld):
         s_right[1:, :] = s[:-1, :]
 
         neigh_avg = (s_up + s_down + s_left + s_right) / 4.0
-        self.scent_grid = (
-            (1.0 - self.scent_diffusion_rate) * s
-            + self.scent_diffusion_rate * neigh_avg
-        ) * self.scent_decay
+        self.scent_grid = ((1.0 - SCENT_DIFFUSION_RATE) * s + SCENT_DIFFUSION_RATE * neigh_avg) * SCENT_DECAY
 
         # Re-apply strict island sources
-        self.scent_grid[self.island_start_x :, 0 : self.heigth // 3] = self.scent_source_strength
-        self.scent_grid[self.island_start_x :, 2 * self.heigth // 3 :] = self.scent_source_strength
+        self.scent_grid[self.island_start_x :, 0 : self.heigth // 3] = SCENT_SOURCE_STRENGTH
+        self.scent_grid[self.island_start_x :, 2 * self.heigth // 3 :] = SCENT_SOURCE_STRENGTH
 
     def _calculate_objectives(self, pool):
         """
@@ -105,18 +106,19 @@ class TwoIslandWorld(GenerationalWorld):
             self.agents = []
             self.agent_grid.fill(None)
 
-            while len(self.agents) < 50:
+            while len(self.agents) < self.initial_agent_count:
                 nx = random.randint(0, 3)
                 ny = random.randint(0, self.heigth - 1)
                 if self.agent_grid[nx, ny] is None:
                     brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
-                    agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+                    agent = Agent(brain, nx, ny, initial_health=self.initial_health, color=None)
                     self.add_agent(agent)
 
         else:
             self._calculate_objectives(evaluation_pool)
 
-            top_agents = get_twoisland_elites(evaluation_pool, 10)
+            num_elites = int(ELITES_FRACTION * len(evaluation_pool))
+            top_agents = get_twoisland_elites(evaluation_pool, num_elites)
 
             # Log the stats of the absolute best representative from Rank 1
             best_agent = top_agents[0]
@@ -132,18 +134,16 @@ class TwoIslandWorld(GenerationalWorld):
             self.agent_grid.fill(None)
             
             popsize = 0
-            while popsize < 50:
+            while popsize < self.initial_agent_count:
                 parent = random.choice(top_agents)
-                child = parent.reproduce(
-                    mutation_prob=0.1, mutation_amp=0.2, reproduction_cost=0.0
-                )
+                child = parent.reproduce(MUTATION_PROB, MUTATION_AMP, 0.0)
 
                 nx = random.randint(0, 3)
                 ny = random.randint(0, self.heigth - 1)
                 if self.agent_grid[nx, ny] is None:
                     child.x = nx
                     child.y = ny
-                    child.health = 100.0
+                    child.health = self.initial_health
                     self.add_agent(child)
                     popsize += 1
 

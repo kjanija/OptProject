@@ -14,18 +14,10 @@ from ..core.world_base import World
 
 from ..scenarios.generational_scenarios import create_competitive_world, create_random_escape_world, create_smart_escape_world, create_two_island_world
 
-WIDTH = 50
-HEIGTH = 50
-INIT_AGENTS = 50
-INIT_HEALTH = 100.0
-INIT_RES_DENSITY = 0.2
-HIDDEN_DIM = 10
-
-TOTAL_GENERATIONS = 8
-OUTPUT_FILE = "experiment_data.csv"
-CHECKPOINT_DIR = "checkpoints"
-CHECKPOINT_INTERVAL = 2  # Save every 100 generations
-MILESTONE_THRESHOLD = 0.95 # Save if an agent reaches 95% of the distance
+from ..core.config import (
+    TOTAL_GENERATIONS, OUTPUT_FILE, CHECKPOINT_DIR, 
+    CHECKPOINT_INTERVAL, MILESTONE_THRESHOLD
+)
 
 
 SCENARIOS = {

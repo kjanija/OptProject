@@ -8,6 +8,12 @@ from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
 from ..utils.nsga2 import get_nsga2_elites
+from ..core.config import (
+    INIT_AGENTS, INIT_HEALTH, MAX_TICKS, ELITES_FRACTION,
+    STORM_SPEED, ISLAND_WIDTH, MUTATION_PROB, MUTATION_AMP,
+    SCENT_DECAY, SCENT_DIFFUSION_RATE, SCENT_SOURCE_STRENGTH,
+    SCENT_DIFFUSION_STEPS, SCENT_INIT_DIFFUSION_STEPS
+)
 
 
 class GenerationalWorld(World):
@@ -19,33 +25,25 @@ class GenerationalWorld(World):
 
     def __init__(
         self,
-        scent_decay=0.98,
-        scent_diffusion_rate=0.35,
-        scent_source_strength=100.0,
-        scent_diffusion_steps=3,
-        scent_init_diffusion_steps=150,
         *args,
         **kwargs,
     ):
-        # disable automatic regrowth and continuous reproduction
-        self.scent_decay = scent_decay  # persistence (->1 => longer persistence)
-        self.scent_diffusion_rate = scent_diffusion_rate  # spread speed (higher => faster)
-        self.scent_source_strength = scent_source_strength  # source intensity
-        self.scent_diffusion_steps = scent_diffusion_steps  # higher => more spread per tick
-        self.scent_init_diffusion_steps = scent_init_diffusion_steps
         self.graveyard = []  # track dead agents for survival bias when ranking
         kwargs["regrow_amount"] = 0.0
         kwargs["reproduction_prob"] = 0.0
         kwargs["enable_scent_action"] = True
+        
+        self.initial_agent_count = INIT_AGENTS
+        self.initial_health = INIT_HEALTH
 
         super().__init__(*args, **kwargs)
 
         self.generation = 1
         self.tick = 0
-        self.max_ticks = 200
+        self.max_ticks = MAX_TICKS
 
-        self.island_start_x = self.width - 5
-        self.storm_speed = 10  # storm moves 1 unit every 10 ticks
+        self.island_start_x = self.width - ISLAND_WIDTH
+        self.storm_speed = STORM_SPEED
 
         # init first epoch
         self._init_epoch()
@@ -59,8 +57,8 @@ class GenerationalWorld(World):
         self.graveyard.clear()
 
         self.resource_grid[self.island_start_x :, :] = self.max_resource
-        self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
-        for _ in range(self.scent_init_diffusion_steps):
+        self.scent_grid[self.island_start_x :, :] = SCENT_SOURCE_STRENGTH
+        for _ in range(SCENT_INIT_DIFFUSION_STEPS):
             self.diffuse_scent()
 
     def remove_agent(self, agent):
@@ -99,13 +97,10 @@ class GenerationalWorld(World):
 
         # average neighbors and decay
         neigh_avg = (s_up + s_down + s_left + s_right) / 4.0
-        self.scent_grid = (
-            (1.0 - self.scent_diffusion_rate) * s
-            + self.scent_diffusion_rate * neigh_avg
-        ) * self.scent_decay
+        self.scent_grid = ((1.0 - SCENT_DIFFUSION_RATE) * s + SCENT_DIFFUSION_RATE * neigh_avg) * SCENT_DECAY
 
         # scent at island is constant and strong
-        self.scent_grid[self.island_start_x :, :] = self.scent_source_strength
+        self.scent_grid[self.island_start_x :, :] = SCENT_SOURCE_STRENGTH
 
     def __calculate_objectives(self, pool):
         """
@@ -130,12 +125,12 @@ class GenerationalWorld(World):
             self.agents = []
             self.agent_grid.fill(None)
 
-            while len(self.agents) < 50:
+            while len(self.agents) < self.initial_agent_count:
                 nx = random.randint(0, 3)
                 ny = random.randint(0, self.heigth - 1)
                 if self.agent_grid[nx, ny] is None:
                     brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
-                    agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+                    agent = Agent(brain, nx, ny, initial_health=self.initial_health, color=None)
                     self.add_agent(agent)
 
         else:
@@ -143,7 +138,7 @@ class GenerationalWorld(World):
             self.__calculate_objectives(evaluation_pool)
 
             # ELITISM (NSGA-II)
-            top_agents = get_nsga2_elites(evaluation_pool, 10)
+            top_agents = get_nsga2_elites(evaluation_pool, int(ELITES_FRACTION * len(evaluation_pool)))
 
             best_agent = top_agents[0]
             print(
@@ -157,19 +152,17 @@ class GenerationalWorld(World):
             self.agents = []
             self.agent_grid.fill(None)
             popsize = 0
-            while popsize < 50:
+            while popsize < self.initial_agent_count:
                 parent = random.choice(top_agents)
                 # cost is 0, manually reset health to max (reminder we are in a generational paradigm)
-                child = parent.reproduce(
-                    mutation_prob=0.1, mutation_amp=0.2, reproduction_cost=0.0
-                )
+                child = parent.reproduce(MUTATION_PROB, MUTATION_AMP, 0.0)
 
                 nx = random.randint(0, 3)
                 ny = random.randint(0, self.heigth - 1)
                 if self.agent_grid[nx, ny] is None:
                     child.x = nx
                     child.y = ny
-                    child.health = 100.0
+                    child.health = self.initial_health
                     self.add_agent(child)
                     popsize += 1
 
@@ -186,7 +179,7 @@ class GenerationalWorld(World):
                 self.storm_x += 1
 
         # diffuse scent
-        for _ in range(self.scent_diffusion_steps):
+        for _ in range(SCENT_DIFFUSION_STEPS):
             self.diffuse_scent()
 
         # standard agent steps (movement, action choice, dying to storm)

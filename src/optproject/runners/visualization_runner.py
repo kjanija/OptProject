@@ -10,14 +10,11 @@ from ..core.agent import Agent
 from ..core.brain import Brain
 from ..core.schema import InputSchema
 from ..core.world_base import World
+from ..core.config import (
+    WIDTH, HEIGTH, INITIAL_AGENTS, INIT_HEALTH, 
+    INIT_RES_DENSITY, HIDDEN_DIM, STEPS_PER_FRAME
+)
 
-WIDTH = 50
-HEIGTH = 50
-INITIAL_AGENTS = 50
-STEPS_PER_FRAME = 1  # i.e. simulation steps per animation frame
-INIT_HEALTH = 100.0
-INIT_RES_DENSITY = 0.2
-HIDDEN_DIM = 10
 OUTPUT_DIM = len(Action)
 INPUT_DIM = InputSchema.TOTAL_INPUTS
 

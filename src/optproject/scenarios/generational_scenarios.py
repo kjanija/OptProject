@@ -7,21 +7,24 @@ from ..core.schema import InputSchema
 from ..environments.generational_world import GenerationalWorld
 from ..environments.twoisland_world import TwoIslandWorld
 from ..environments.competitive_world import CompetitiveWorld
+from ..core.config import (
+    WIDTH, HEIGHT, INIT_AGENTS, INIT_HEALTH, COST_OF_LIFE,
+    MIGRATORS_FRACTION, HUNTERS_HEALTH_MULTIPLIER, COST_OF_LIFE_COMPETITIVE,
+    SPAWN_AREA_WIDTH
+)
 
-WIDTH = 50
-HEIGHT = 50
 
-
+NUM_AGENTS = INIT_AGENTS
 def create_random_escape_world(**world_kwargs):
-    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2, **world_kwargs)
+    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=COST_OF_LIFE, **world_kwargs)
 
     agents = 0
-    while agents < 50:
-        nx = random.randint(0, 3)
+    while agents < NUM_AGENTS:
+        nx = random.randint(0, SPAWN_AREA_WIDTH - 1)
         ny = random.randint(0, HEIGHT - 1)
         if world.agent_grid[nx, ny] is None:
             brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
-            agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+            agent = Agent(brain, nx, ny, initial_health=INIT_HEALTH, color=None)
             world.add_agent(agent)
             agents += 1
 
@@ -32,11 +35,11 @@ def create_smart_escape_world(**world_kwargs):
     """
     Injects "scent tracker" genes
     """
-    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2, **world_kwargs)
+    world = GenerationalWorld(width=WIDTH, height=HEIGHT, cost_of_life=COST_OF_LIFE, **world_kwargs)
 
     agents = 0
-    while agents < 50:
-        nx = random.randint(0, 3)
+    while agents < NUM_AGENTS:
+        nx = random.randint(0, SPAWN_AREA_WIDTH - 1)
         ny = random.randint(0, HEIGHT - 1)
         if world.agent_grid[nx, ny] is None:
             brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
@@ -60,22 +63,22 @@ def create_smart_escape_world(**world_kwargs):
 
             brain.W2[2, Action.GATHER] = 110.0  # if standing on food, eats it
 
-            agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+            agent = Agent(brain, nx, ny, initial_health=INIT_HEALTH, color=None)
             world.add_agent(agent)
             agents += 1
 
     return world
 
 def create_two_island_world(**world_kwargs):
-    world = TwoIslandWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.2, **world_kwargs)
+    world = TwoIslandWorld(width=WIDTH, height=HEIGHT, cost_of_life=COST_OF_LIFE, **world_kwargs)
     
     agents = 0
-    while agents < 50:
-        nx = random.randint(0, 3)
+    while agents < NUM_AGENTS:
+        nx = random.randint(0, SPAWN_AREA_WIDTH - 1)
         ny = random.randint(0, HEIGHT - 1)
         if world.agent_grid[nx, ny] is None:
             brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
-            agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+            agent = Agent(brain, nx, ny, initial_health=INIT_HEALTH, color=None)
             world.add_agent(agent)
             agents += 1
             
@@ -108,17 +111,17 @@ def inject_hunter_genes(brain: Brain):
 
 def create_competitive_world(**world_kwargs):
     # Higher cost of life forces Hunters to attack to survive
-    world = CompetitiveWorld(width=WIDTH, height=HEIGHT, cost_of_life=0.6, **world_kwargs)
+    world = CompetitiveWorld(width=WIDTH, height=HEIGHT, cost_of_life=COST_OF_LIFE_COMPETITIVE, **world_kwargs)
     
     # Spawn 40 Migrators
     migrators = 0
-    while migrators < 40:
-        nx = random.randint(0, 3)
+    while migrators < int(NUM_AGENTS * MIGRATORS_FRACTION):
+        nx = random.randint(0, SPAWN_AREA_WIDTH - 1)
         ny = random.randint(0, HEIGHT - 1)
         if world.agent_grid[nx, ny] is None:
             brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
             inject_migrator_genes(brain)
-            agent = Agent(brain, nx, ny, initial_health=100.0, color=None)
+            agent = Agent(brain, nx, ny, initial_health=INIT_HEALTH, color=None)
             # Attach faction tag for the evaluator
             agent.faction = "migrator" # type: ignore
             world.add_agent(agent)
@@ -126,14 +129,13 @@ def create_competitive_world(**world_kwargs):
             
     # Spawn 10 Hunters
     hunters = 0
-    while hunters < 10:
+    while hunters < int(NUM_AGENTS * (1 - MIGRATORS_FRACTION)):
         nx = random.randint(15, 20)
         ny = random.randint(0, HEIGHT - 1)
         if world.agent_grid[nx, ny] is None:
             brain = Brain(InputSchema.TOTAL_INPUTS, 10, len(Action))
             inject_hunter_genes(brain)
-            # Starting health is 40. They must hunt to survive!
-            agent = Agent(brain, nx, ny, initial_health=40.0, color=None)
+            agent = Agent(brain, nx, ny, initial_health=INIT_HEALTH * HUNTERS_HEALTH_MULTIPLIER, color=None)
             # Attach faction tag for the evaluator
             agent.faction = "hunter" # type: ignore
             world.add_agent(agent)

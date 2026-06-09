@@ -17,12 +17,9 @@ from optproject.scenarios.generational_scenarios import (
     create_two_island_world,
     create_competitive_world,
 )
+from optproject.core.config import WIDTH, HEIGTH, INIT_RES_DENSITY, CHECKPOINT_DIR
 
 # Ensure these match the constants used during training
-WIDTH = 50
-HEIGTH = 50
-INIT_RES_DENSITY = 0.2
-CHECKPOINT_DIR = "checkpoints"
 
 SCENARIOS = {
     "1": ("random", create_random_escape_world),

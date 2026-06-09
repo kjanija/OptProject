@@ -1,6 +1,9 @@
 from .generational_world import GenerationalWorld
 import random
 from ..utils.nsga2 import get_migrator_elites, get_hunter_elites
+from ..core.config import (
+    MIGRATORS_FRACTION, MUTATION_PROB, MUTATION_AMP, HUNTERS_HEALTH_MULTIPLIER
+)
 
 class CompetitiveWorld(GenerationalWorld):
     """
@@ -38,8 +41,9 @@ class CompetitiveWorld(GenerationalWorld):
             top_migrators = get_migrator_elites(migrators, num_migrator_elites)
             
             # Breed 40 Migrators
-            while len([a for a in self.agents if getattr(a, 'faction', '') == "migrator"]) < 40:
-                child = random.choice(top_migrators).reproduce(0.1, 0.2, 0.0)
+            num_migrators = int(self.initial_agent_count * MIGRATORS_FRACTION)
+            while len([a for a in self.agents if getattr(a, 'faction', '') == "migrator"]) < num_migrators:
+                child = random.choice(top_migrators).reproduce(MUTATION_PROB, MUTATION_AMP, 0.0)
                 child.faction = "migrator" # type: ignore
                 nx = random.randint(0, 3) 
                 ny = random.randint(0, self.heigth - 1)
@@ -65,14 +69,15 @@ class CompetitiveWorld(GenerationalWorld):
             top_hunters = get_hunter_elites(hunters, num_hunter_elites)
             
             # Breed 10 Hunters
-            while len([a for a in self.agents if getattr(a, 'faction', '') == "hunter"]) < 10:
-                child = random.choice(top_hunters).reproduce(0.1, 0.2, 0.0)
+            num_hunters = self.initial_agent_count - int(self.initial_agent_count * MIGRATORS_FRACTION)
+            while len([a for a in self.agents if getattr(a, 'faction', '') == "hunter"]) < num_hunters:
+                child = random.choice(top_hunters).reproduce(MUTATION_PROB, MUTATION_AMP, 0.0)
                 child.faction = "hunter" # type: ignore
                 nx = random.randint(15, 20) # Spawn in the middle to intercept!
                 ny = random.randint(0, self.heigth - 1)
                 if self.agent_grid[nx, ny] is None:
                     child.x, child.y = nx, ny
-                    child.health, child.age = 40.0, 0
+                    child.health, child.age = self.initial_health * HUNTERS_HEALTH_MULTIPLIER, 0
                     self.add_agent(child)
                     
         self.generation += 1

@@ -36,20 +36,6 @@ def main():
         default=False,
         help="Show scent vector field overlay",
     )
-    parser.add_argument(
-        "--vector-step",
-        type=int,
-        default=4,
-        help="Subsampling step for scent vectors",
-    )
-    parser.add_argument("--scent-decay", type=float, default=0.98)
-    parser.add_argument("--scent-diffusion-rate", type=float, default=1)
-    parser.add_argument("--scent-source-strength", type=float, default=100.0)
-    parser.add_argument("--scent-diffusion-steps", type=int, default=3)
-    parser.add_argument("--scent-init-diffusion-steps", type=int, default=150)
-
-    args = parser.parse_args()
-
     scenario_map = {
         "1": (
             create_random_escape_world,
@@ -69,23 +55,14 @@ def main():
         ),
     }
 
+    args = parser.parse_args()
     create_world_fn, start_msg = scenario_map[args.scenario]
-
-    def make_world():
-        return create_world_fn(
-            scent_decay=args.scent_decay,
-            scent_diffusion_rate=args.scent_diffusion_rate,
-            scent_source_strength=args.scent_source_strength,
-            scent_diffusion_steps=args.scent_diffusion_steps,
-            scent_init_diffusion_steps=args.scent_init_diffusion_steps,
-        )
 
     print(start_msg)
     run_visualization(
-        make_world,
+        create_world_fn,
         show_scent_heatmap=args.show_scent_heatmap,
         show_scent_vectors=args.show_scent_vectors,
-        vector_step=args.vector_step,
     )
 
 
