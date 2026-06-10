@@ -29,3 +29,7 @@ logs/
 
 # Ignore the .vscode directory
 .vscode/
+
+# scripts
+submit_job.sh
+run_on_orfeo.sh
