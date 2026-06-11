@@ -29,20 +29,20 @@ class GenerationalWorld(World):
         **kwargs,
     ):
         self.graveyard = []  # track dead agents for survival bias when ranking
-        kwargs["regrow_amount"] = 0.0
         kwargs["reproduction_prob"] = 0.0
         kwargs["enable_scent_action"] = True
         
         self.initial_agent_count = INIT_AGENTS
         self.initial_health = INIT_HEALTH
 
+        # Define early so overridden resource_regrow doesn't fail during World.__init__
+        self.island_start_x = (args[0] if len(args) > 0 else kwargs.get("width", 50)) - ISLAND_WIDTH
+
         super().__init__(*args, **kwargs)
 
         self.generation = 1
         self.tick = 0
         self.max_ticks = MAX_TICKS
-
-        self.island_start_x = self.width - ISLAND_WIDTH
         self.storm_speed = STORM_SPEED
 
         # init first epoch
@@ -101,6 +101,17 @@ class GenerationalWorld(World):
 
         # scent at island is constant and strong
         self.scent_grid[self.island_start_x :, :] = SCENT_SOURCE_STRENGTH
+
+    def resource_regrow(self, density: float = 0.05, amount: float = 5.0):
+        """Override to regrow resources only on the island."""
+        if amount <= 0:
+            return
+        mask = np.random.rand(self.width, self.heigth) < density
+        island_mask = np.zeros_like(mask)
+        island_mask[self.island_start_x :, :] = True
+        mask = mask & island_mask
+        self.resource_grid[mask] += amount
+        self.resource_grid = np.minimum(self.resource_grid, self.max_resource)
 
     def __calculate_objectives(self, pool):
         """

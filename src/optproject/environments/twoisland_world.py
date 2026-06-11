@@ -74,6 +74,18 @@ class TwoIslandWorld(GenerationalWorld):
         self.scent_grid[self.island_start_x :, 0 : self.heigth // 3] = SCENT_SOURCE_STRENGTH
         self.scent_grid[self.island_start_x :, 2 * self.heigth // 3 :] = SCENT_SOURCE_STRENGTH
 
+    def resource_regrow(self, density: float = 0.05, amount: float = 5.0):
+        """Override to regrow resources only on the two islands."""
+        if amount <= 0:
+            return
+        mask = np.random.rand(self.width, self.heigth) < density
+        island_mask = np.zeros_like(mask)
+        island_mask[self.island_start_x :, 0 : self.heigth // 3] = True
+        island_mask[self.island_start_x :, 2 * self.heigth // 3 :] = True
+        mask = mask & island_mask
+        self.resource_grid[mask] += amount
+        self.resource_grid = np.minimum(self.resource_grid, self.max_resource)
+
     def _calculate_objectives(self, pool):
         """
         Helper method to calculate and assign normalized spatial objectives
