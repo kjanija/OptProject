@@ -26,6 +26,7 @@ logs/
 
 # miscelaneous files to ignore
 .DS_Store
+tmp/
 
 # Ignore the .vscode directory
 .vscode/

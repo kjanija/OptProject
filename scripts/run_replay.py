@@ -17,7 +17,7 @@ from optproject.scenarios.generational_scenarios import (
     create_two_island_world,
     create_competitive_world,
 )
-from optproject.core.config import WIDTH, HEIGTH, INIT_RES_DENSITY, CHECKPOINT_DIR
+from optproject.core.config import WIDTH, HEIGTH, INIT_RES_DENSITY, CHECKPOINT_DIR, MAX_TICKS, STEPS_PER_FRAME
 
 # Ensure these match the constants used during training
 
@@ -122,7 +122,22 @@ def main():
         choices=["1", "2", "3", "4"],
         help="World type: 1=Random, 2=Smart, 3=Two Island, 4=Competitive",
     )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="Save the animation video if selected."
+    )
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=10.0,
+        help="Video duration in seconds (chooses the speed of the animation)."
+    )
     args = parser.parse_args()
+
+    if args.duration <= 0:
+        print("Duration must be greater than 0.")
+        sys.exit(1)
 
     scenario_name = None
     world_fn = None
@@ -137,14 +152,39 @@ def main():
         print("Make sure you run headless_runner.py first!")
         sys.exit(1)
 
+    import matplotlib.animation as animation
+    import matplotlib.pyplot as plt
+
+    total_frames = int(MAX_TICKS / STEPS_PER_FRAME)
+    fps = total_frames / args.duration
+
+    original_func_anim = animation.FuncAnimation
+
+    def mocked_func_anim(fig, func, **kwargs):
+        kwargs['interval'] = int(1000 / fps)
+        if args.save:
+            kwargs['frames'] = total_frames
+        return original_func_anim(fig, func, **kwargs)
+
+    animation.FuncAnimation = mocked_func_anim
+
+    if args.save:
+        plt.show = lambda *a, **kw: None
+
     # Boot up your existing visualizer using our custom creation function!
     # We wrap it in a lambda because load_checkpoint_world requires an argument.
-    run_visualization(
+    ani = run_visualization(
         world_creation_fun=lambda: load_checkpoint_world(target_file, world_fn),
         show_scent_heatmap=True,
         show_scent_vectors=False    
     )
 
+    if args.save:
+        base_name, _ = os.path.splitext(target_file)
+        out_filename = f"{base_name}.mp4"
+        print(f"Saving replay to {out_filename} (Duration: {args.duration}s, FPS: {fps:.1f})...")
+        ani.save(out_filename, fps=fps)
+        print("Save complete!")
 
 if __name__ == "__main__":
     main()
